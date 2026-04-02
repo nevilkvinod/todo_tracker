@@ -31,7 +31,9 @@ interface AppContextType {
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   updateTaskStatus: (taskId: string, newStatus: Task['status']) => void;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
+  updateProject: (projectId: string, updates: Partial<Project>) => void;
   addProject: (project: Omit<Project, 'id' | 'progress'>) => void;
+  deleteProject: (projectId: string) => void;
   addTask: (task: Omit<Task, 'id'>) => void;
   deleteTask: (taskId: string) => void;
   logAction: (action: string, projectId: string | null, taskTitle: string, details: string) => void;
@@ -250,6 +252,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     markDirty();
   };
 
+  const updateProject = (projectId: string, updates: Partial<Project>) => {
+    setProjects(prevProjects => {
+      const updated = [...prevProjects];
+      const index = updated.findIndex(p => p.id === projectId);
+      if (index === -1) return prevProjects;
+      updated[index] = { ...updated[index], ...updates };
+      return updated;
+    });
+    logAction('Update', projectId, 'N/A', `Project details modified`);
+    markDirty();
+  };
+
+  const deleteProject = (projectId: string) => {
+    if (confirm("Are you sure you want to delete this project? All associated tasks will be removed.")) {
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      setTasks(prev => prev.filter(t => t.projectId !== projectId));
+      logAction('Delete', projectId, 'N/A', `Project permanently deleted`);
+      markDirty();
+    }
+  };
+
   const addTask = (t: Omit<Task, 'id'>) => {
     const task: Task = { ...t, id: `t_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` };
     setTasks(prev => [...prev, task]);
@@ -274,7 +297,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{ 
       projects, tasks, logs, 
       syncStatus, lastSyncTime, githubAuth, setGithubAuth, syncNow,
-      setTasks, updateTaskStatus, updateTask, addProject, addTask, deleteTask, logAction 
+      setTasks, updateTaskStatus, updateTask, addProject, updateProject, deleteProject, addTask, deleteTask, logAction 
     }}>
       {children}
       <ConflictModal 

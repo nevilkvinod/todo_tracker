@@ -5,15 +5,18 @@ import { useAppContext } from "@/context/AppContext";
 import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 import { GanttChart } from "@/components/timeline/GanttChart";
 import { ProjectCreateModal } from "@/components/board/ProjectCreateModal";
+import { ProjectsListPanel } from "@/components/dashboard/ProjectsListPanel";
 import { exportTrackerData, exportActivityLogs } from "@/utils/exportUtils";
 import { SettingsModal } from "@/components/layout/SettingsModal";
 import { Button } from "@/components/ui/button";
 import { Plus, Download, History, Cloud, CloudOff, CloudCog, Settings, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
+import { Project } from '@/data/mockData';
 
 export default function Home() {
-  const { projects, tasks, logs, addProject, syncStatus, lastSyncTime, githubAuth, setGithubAuth, syncNow } = useAppContext();
+  const { projects, tasks, logs, addProject, updateProject, syncStatus, lastSyncTime, githubAuth, setGithubAuth, syncNow } = useAppContext();
   const [isProjectModalOpen, setProjectModalOpen] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
 
   const StatusIcon = () => {
@@ -65,7 +68,7 @@ export default function Home() {
             <Button variant="secondary" onClick={() => exportTrackerData(projects, tasks)}>
               <Download className="mr-2 h-4 w-4" /> Backup CSV
             </Button>
-            <Button onClick={() => setProjectModalOpen(true)}>
+            <Button onClick={() => { setProjectToEdit(null); setProjectModalOpen(true); }}>
               <Plus className="mr-2 h-4 w-4" /> New Project
             </Button>
           </div>
@@ -74,15 +77,20 @@ export default function Home() {
         {/* Core Metrics */}
         <DashboardMetrics />
         
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-6">
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-12 mt-6">
           
+          {/* Projects Management Panel */}
+          <div className="col-span-1 lg:col-span-3">
+             <ProjectsListPanel onEditProject={(p) => { setProjectToEdit(p); setProjectModalOpen(true); }} />
+          </div>
+
           {/* Timeline View */}
-          <div className="col-span-1 lg:col-span-5 rounded-xl border border-border bg-card p-6 min-h-[400px]">
+          <div className="col-span-1 lg:col-span-6 rounded-xl border border-border bg-card p-6 min-h-[400px]">
              <GanttChart />
           </div>
 
           {/* Activity Log Panel */}
-          <div className="col-span-1 lg:col-span-2 rounded-xl border border-border bg-card flex flex-col overflow-hidden max-h-[600px]">
+          <div className="col-span-1 lg:col-span-3 rounded-xl border border-border bg-card flex flex-col overflow-hidden max-h-[600px]">
              <div className="p-4 border-b border-border bg-secondary/10 flex justify-between items-center">
                 <h3 className="font-semibold flex items-center gap-2"><History size={16} /> Activity Log</h3>
                 <span className="text-xs bg-muted px-2 py-0.5 rounded-full">{logs.length} events</span>
@@ -116,8 +124,10 @@ export default function Home() {
 
       <ProjectCreateModal 
         isOpen={isProjectModalOpen} 
-        onClose={() => setProjectModalOpen(false)} 
-        onSave={addProject} 
+        onClose={() => { setProjectModalOpen(false); setProjectToEdit(null); }} 
+        onSave={addProject}
+        editProject={projectToEdit}
+        onEditSave={updateProject}
       />
 
       <SettingsModal 

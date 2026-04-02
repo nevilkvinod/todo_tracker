@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Project } from '@/data/mockData';
@@ -7,29 +7,58 @@ interface ProjectCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (project: Omit<Project, 'id' | 'progress'>) => void;
+  editProject?: Project | null;
+  onEditSave?: (id: string, updates: Partial<Project>) => void;
 }
 
-export function ProjectCreateModal({ isOpen, onClose, onSave }: ProjectCreateModalProps) {
+export function ProjectCreateModal({ isOpen, onClose, onSave, editProject, onEditSave }: ProjectCreateModalProps) {
   const [name, setName] = useState('');
   const [priority, setPriority] = useState<Project['priority']>('Medium');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date(Date.now() + 86400000 * 30).toISOString().split('T')[0]);
   const [color, setColor] = useState('#3b82f6');
 
+  useEffect(() => {
+    if (isOpen) {
+      if (editProject) {
+        setName(editProject.name);
+        setPriority(editProject.priority);
+        setStartDate(new Date(editProject.startDate).toISOString().split('T')[0]);
+        setEndDate(new Date(editProject.endDate).toISOString().split('T')[0]);
+        setColor(editProject.color || '#3b82f6');
+      } else {
+        setName('');
+        setPriority('Medium');
+        setStartDate(new Date().toISOString().split('T')[0]);
+        setEndDate(new Date(Date.now() + 86400000 * 30).toISOString().split('T')[0]);
+        setColor('#3b82f6');
+      }
+    }
+  }, [isOpen, editProject]);
+
   if (!isOpen) return null;
 
   const handleSave = () => {
-    if (!name) return;
-    onSave({
-      name,
-      status: 'Active',
-      priority,
-      startDate: new Date(startDate).toISOString(),
-      endDate: new Date(endDate).toISOString(),
-      color
-    });
-    // Reset
-    setName('');
+    if (!name.trim()) return;
+    
+    if (editProject && onEditSave) {
+      onEditSave(editProject.id, {
+        name,
+        priority,
+        startDate: new Date(startDate).toISOString(),
+        endDate: new Date(endDate).toISOString(),
+        color
+      });
+    } else {
+      onSave({
+        name,
+        status: 'Active',
+        priority,
+        startDate: new Date(startDate).toISOString(),
+        endDate: new Date(endDate).toISOString(),
+        color
+      });
+    }
     onClose();
   };
 
@@ -37,7 +66,7 @@ export function ProjectCreateModal({ isOpen, onClose, onSave }: ProjectCreateMod
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
       <Card className="w-full max-w-sm shadow-lg border-primary/20 bg-card">
         <CardHeader>
-          <CardTitle>New Project</CardTitle>
+          <CardTitle>{editProject ? 'Edit Project' : 'New Project'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -101,7 +130,7 @@ export function ProjectCreateModal({ isOpen, onClose, onSave }: ProjectCreateMod
         </CardContent>
         <div className="flex justify-end gap-2 p-6 pt-0">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>Create</Button>
+          <Button onClick={handleSave}>{editProject ? 'Save Changes' : 'Create'}</Button>
         </div>
       </Card>
     </div>
