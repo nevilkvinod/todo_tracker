@@ -62,12 +62,22 @@ enum Role {
   ADMIN
 }
 
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  CANCELLED
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
 // Domain Models
 model Project {
   id          String    @id @default(cuid())
   name        String
   description String?
-  color       String    @default("#4F46E5") // Unique color hex for tracking
+  color       String        @default("#4F46E5") // Unique color hex for tracking
+  status      ProjectStatus @default(NOT_STARTED)
   tasks       Task[]
   
   deletedAt   DateTime? // Soft Delete

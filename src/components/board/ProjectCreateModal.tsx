@@ -13,7 +13,9 @@ interface ProjectCreateModalProps {
 
 export function ProjectCreateModal({ isOpen, onClose, onSave, editProject, onEditSave }: ProjectCreateModalProps) {
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Project['priority']>('Medium');
+  const [status, setStatus] = useState<Project['status']>('Active');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date(Date.now() + 86400000 * 30).toISOString().split('T')[0]);
   const [color, setColor] = useState('#3b82f6');
@@ -22,13 +24,17 @@ export function ProjectCreateModal({ isOpen, onClose, onSave, editProject, onEdi
     if (isOpen) {
       if (editProject) {
         setName(editProject.name);
+        setDescription((editProject as any).description || '');
         setPriority(editProject.priority);
+        setStatus(editProject.status || 'Active');
         setStartDate(new Date(editProject.startDate).toISOString().split('T')[0]);
         setEndDate(new Date(editProject.endDate).toISOString().split('T')[0]);
         setColor(editProject.color || '#3b82f6');
       } else {
         setName('');
+        setDescription('');
         setPriority('Medium');
+        setStatus('Active');
         setStartDate(new Date().toISOString().split('T')[0]);
         setEndDate(new Date(Date.now() + 86400000 * 30).toISOString().split('T')[0]);
         setColor('#3b82f6');
@@ -44,7 +50,10 @@ export function ProjectCreateModal({ isOpen, onClose, onSave, editProject, onEdi
     if (editProject && onEditSave) {
       onEditSave(editProject.id, {
         name,
+        // @ts-ignore
+        description,
         priority,
+        status,
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
         color
@@ -52,7 +61,9 @@ export function ProjectCreateModal({ isOpen, onClose, onSave, editProject, onEdi
     } else {
       onSave({
         name,
-        status: 'Active',
+        // @ts-ignore
+        description,
+        status,
         priority,
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
@@ -79,19 +90,46 @@ export function ProjectCreateModal({ isOpen, onClose, onSave, editProject, onEdi
               autoFocus
             />
           </div>
-          
+
           <div className="space-y-2">
-            <label className="text-sm font-medium">Priority</label>
-            <select 
-              value={priority} 
-              onChange={e => setPriority(e.target.value as any)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            >
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Critical">Critical</option>
-            </select>
+            <label className="text-sm font-medium">Description</label>
+            <textarea 
+              value={description} 
+              onChange={e => setDescription(e.target.value)}
+              placeholder="A brief overview of the project's goals..."
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[60px]"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <select 
+                value={status} 
+                onChange={e => setStatus(e.target.value as any)}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="Not Started">Not Started</option>
+                <option value="Active">Active</option>
+                <option value="In Progress">In Progress</option>
+                <option value="On Hold">On Hold</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Priority</label>
+              <select 
+                value={priority} 
+                onChange={e => setPriority(e.target.value as any)}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+              </select>
+            </div>
           </div>
 
           <div className="space-y-2">

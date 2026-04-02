@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useAppContext } from "@/context/AppContext";
 import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
+import { DashboardAnalytics } from "@/components/dashboard/DashboardAnalytics";
 import { GanttChart } from "@/components/timeline/GanttChart";
 import { ProjectCreateModal } from "@/components/board/ProjectCreateModal";
 import { ProjectsListPanel } from "@/components/dashboard/ProjectsListPanel";
@@ -76,6 +77,7 @@ export default function Home() {
         
         {/* Core Metrics */}
         <DashboardMetrics />
+        <DashboardAnalytics />
         
         <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-12 mt-6">
           
