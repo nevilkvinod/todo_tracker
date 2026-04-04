@@ -7,7 +7,7 @@ export class ProjectRepository {
       return prisma.project.findMany({
         where: { deletedAt: null },
         orderBy: { createdAt: 'desc' },
-        include: { tasks: true }
+        include: { tasks: true, userProjects: true }
       });
     }
 
@@ -19,7 +19,7 @@ export class ProjectRepository {
         }
       },
       orderBy: { createdAt: 'desc' },
-      include: { tasks: true }
+      include: { tasks: true, userProjects: true }
     });
   }
 
@@ -76,6 +76,17 @@ export class ProjectRepository {
       });
       await tx.auditLog.create({
         data: { action: "ASSIGN_PROJECT", userId: managerId, targetId: assigneeId }
+      });
+    });
+  }
+
+  static async removeUserFromProject(projectId: string, userId: string, managerId: string) {
+    return prisma.$transaction(async (tx) => {
+      await tx.userProject.delete({
+        where: { userId_projectId: { userId, projectId } }
+      });
+      await tx.auditLog.create({
+        data: { action: "REMOVE_PROJECT", userId: managerId, targetId: userId }
       });
     });
   }

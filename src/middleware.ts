@@ -6,7 +6,7 @@ export default withAuth(
     const token = req.nextauth.token;
     const { pathname } = req.nextUrl;
 
-    if (pathname === "/") {
+    if (pathname === "/" || pathname === "/dashboard") {
       if (token?.role === "MANAGER") {
         return NextResponse.redirect(new URL("/manager", req.url));
       } else {
@@ -26,5 +26,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/", "/board/:path*", "/timeline/:path*", "/manager/:path*", "/calendar/:path*"],
+  matcher: ["/", "/dashboard", "/dashboard/:path*", "/board/:path*", "/timeline/:path*", "/manager/:path*", "/calendar/:path*"],
 };

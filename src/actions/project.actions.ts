@@ -90,3 +90,16 @@ export async function assignProjectAction(data: any) {
     return { success: false, data: null, error: error.message };
   }
 }
+
+export async function removeUserFromProjectAction(data: any) {
+  try {
+    const user = await requireAuth();
+    const { projectId, assigneeId } = AssignSchema.parse(data);
+    await ProjectService.removeUser(projectId, assigneeId, user as any);
+    revalidatePath('/manager');
+    revalidateTag('projects', 'default');
+    return { success: true, data: null, error: null };
+  } catch (error: any) {
+    return { success: false, data: null, error: error.message };
+  }
+}

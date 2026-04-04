@@ -4,19 +4,30 @@ import { Role } from "@prisma/client";
 export class UserRepository {
   static async findById(id: string) {
     return prisma.user.findFirst({
-      where: { id }
+      where: { id, deletedAt: null }
     });
   }
 
   static async findByEmail(email: string) {
     return prisma.user.findFirst({
-      where: { email }
+      where: { email, deletedAt: null }
     });
   }
 
-  static async getAllUsers() {
+  static async getAllUsers(limit: number = 50) {
     return prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, image: true }
+      where: { deletedAt: null },
+      take: limit,
+      select: { 
+        id: true, 
+        name: true, 
+        email: true, 
+        role: true, 
+        image: true,
+        userProjects: {
+          include: { project: true }
+        }
+      }
     });
   }
 
@@ -24,6 +35,13 @@ export class UserRepository {
     return prisma.user.update({
       where: { id },
       data: { role: newRole }
+    });
+  }
+
+  static async softDelete(id: string) {
+    return prisma.user.update({
+      where: { id },
+      data: { deletedAt: new Date() }
     });
   }
 }

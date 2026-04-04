@@ -46,4 +46,12 @@ export class ProjectService {
     await ProjectRepository.assignUserToProject(projectId, assigneeId, currentUser.id);
     return { success: true };
   }
+
+  static async removeUser(projectId: string, assigneeId: string, currentUser: { id: string, role: string }) {
+    if (currentUser.role !== 'MANAGER') {
+      throw new Error('UNAUTHORIZED: Only managers can remove users.');
+    }
+    await ProjectRepository.removeUserFromProject(projectId, assigneeId, currentUser.id);
+    return { success: true };
+  }
 }
