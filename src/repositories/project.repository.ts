@@ -1,4 +1,4 @@
-import prisma from '@/lib/prisma';
+import { prisma } from "@/lib/prisma";
 import { Project, Prisma } from '@prisma/client';
 
 export class ProjectRepository {

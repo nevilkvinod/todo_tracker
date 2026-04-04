@@ -41,7 +41,7 @@ export async function createTaskAction(data: any) {
     const task = await TaskService.createTask(parsedData, user.id, user.role as string);
     revalidatePath("/board");
     revalidatePath("/timeline");
-    revalidateTag("board-tasks");
+    revalidateTag("board-tasks", "default");
     return { success: true, data: task, error: null };
   } catch (error: any) {
     return { success: false, data: null, error: error.message };
@@ -55,7 +55,7 @@ export async function updateTaskAction(id: string, data: any) {
     const task = await TaskService.updateTask(id, parsedData, user.id, user.role as string);
     revalidatePath("/board");
     revalidatePath("/timeline");
-    revalidateTag("board-tasks");
+    revalidateTag("board-tasks", "default");
     return { success: true, data: task, error: null };
   } catch (error: any) {
     return { success: false, data: null, error: error.message };
@@ -68,7 +68,7 @@ export async function deleteTaskAction(id: string) {
     const task = await TaskService.deleteTask(id, user.id, user.role as string);
     revalidatePath("/board");
     revalidatePath("/timeline");
-    revalidateTag("board-tasks");
+    revalidateTag("board-tasks", "default");
     return { success: true, data: task, error: null };
   } catch (error: any) {
     return { success: false, data: null, error: error.message };

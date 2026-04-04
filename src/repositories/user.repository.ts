@@ -1,22 +1,21 @@
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
 
 export class UserRepository {
   static async findById(id: string) {
     return prisma.user.findFirst({
-      where: { id, deletedAt: null }
+      where: { id }
     });
   }
 
   static async findByEmail(email: string) {
     return prisma.user.findFirst({
-      where: { email, deletedAt: null }
+      where: { email }
     });
   }
 
   static async getAllUsers() {
     return prisma.user.findMany({
-      where: { deletedAt: null },
       select: { id: true, name: true, email: true, role: true, image: true }
     });
   }

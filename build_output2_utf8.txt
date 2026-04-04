@@ -1,0 +1,67 @@
+﻿
+> tracker@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.2.2 (Turbopack)
+- Environments: .env
+
+node.exe : ΓÜá The "middleware" 
+file convention is deprecated. 
+Please use "proxy" instead. 
+Learn more: https://nextjs.org/do
+cs/messages/middleware-to-proxy
+At line:1 char:1
++ & "C:\Users\nevil\scoop\apps\no
+dejs-lts\current/node.exe" 
+"C:\Users\n ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          : No 
+   tSpecified: (ΓÜá The "middle  
+  ...leware-to-proxy:String) [   
+ ], RemoteException
+    + FullyQualifiedErrorId : Na 
+   tiveCommandError
+ 
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 3.5s
+  Running TypeScript ...
+  Finished TypeScript in 2.6s ...
+  Collecting page data using 13 workers ...
+Error [PrismaClientConstructorVal
+idationError]: Using engine type 
+"client" requires either 
+"adapter" or "accelerateUrl" to 
+be provided to PrismaClient 
+constructor.
+Read more at https://pris.ly/d/cl
+ient-constructor
+    at instantiateModule (C:\2024
+\Projects\Tracker\tracker\.next\s
+erver\chunks\[turbopack]_runtime.
+js:853:9)
+    at instantiateRuntimeModule (
+C:\2024\Projects\Tracker\tracker\
+.next\server\chunks\[turbopack]_r
+untime.js:882:12)
+    at 
+getOrInstantiateRuntimeModule (C:
+\2024\Projects\Tracker\tracker\.n
+ext\server\chunks\[turbopack]_run
+time.js:895:12)
+    at Object.m (C:\2024\Projects
+\Tracker\tracker\.next\server\chu
+nks\[turbopack]_runtime.js:898:18
+)
+    at Object.<anonymous> (C:\202
+4\Projects\Tracker\tracker\.next\
+server\app\api\auth\[...nextauth]
+\route.js:6:3)
+
+> Build error occurred
+Error: Failed to collect page 
+data for /api/auth/[...nextauth]
+    at ignore-listed frames {
+  type: 'Error'
+}

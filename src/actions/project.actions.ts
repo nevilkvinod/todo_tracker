@@ -37,7 +37,7 @@ export async function createProjectAction(data: any) {
     revalidatePath('/');
     revalidatePath('/manager');
     revalidatePath('/board');
-    revalidateTag('projects');
+    revalidateTag('projects', 'default');
     return { success: true, data: project, error: null };
   } catch (error: any) {
     return { success: false, data: null, error: error.message };
@@ -52,7 +52,7 @@ export async function updateProjectAction(id: string, data: any) {
     revalidatePath('/');
     revalidatePath('/manager');
     revalidatePath('/board');
-    revalidateTag('projects');
+    revalidateTag('projects', 'default');
     return { success: true, data: project, error: null };
   } catch (error: any) {
     return { success: false, data: null, error: error.message };
@@ -66,7 +66,7 @@ export async function deleteProjectAction(id: string) {
     revalidatePath('/');
     revalidatePath('/manager');
     revalidatePath('/board');
-    revalidateTag('projects');
+    revalidateTag('projects', 'default');
     return { success: true, data: project, error: null };
   } catch (error: any) {
     return { success: false, data: null, error: error.message };
@@ -84,7 +84,7 @@ export async function assignProjectAction(data: any) {
     const { projectId, assigneeId } = AssignSchema.parse(data);
     await ProjectService.assignUser(projectId, assigneeId, user as any);
     revalidatePath('/manager');
-    revalidateTag('projects');
+    revalidateTag('projects', 'default');
     return { success: true, data: null, error: null };
   } catch (error: any) {
     return { success: false, data: null, error: error.message };

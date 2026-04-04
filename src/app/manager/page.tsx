@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { ProjectService } from '@/services/project.service';
 import { UserService } from '@/services/user.service';
 import { Users, Briefcase } from 'lucide-react';
-import prisma from "@/lib/prisma"; // Needed for userProjects include since Service doesn't return userProjects by default, or we can use Prisma directly for simple reads in Server Components.
+import { prisma } from "@/lib/prisma"; // Needed for userProjects include since Service doesn't return userProjects by default, or we can use Prisma directly for simple reads in Server Components.
 
 export default async function ManagerDashboard() {
   const session = await getServerSession(authOptions);
@@ -16,7 +16,6 @@ export default async function ManagerDashboard() {
 
   // Using services where applicable
   const users = await prisma.user.findMany({
-    where: { deletedAt: null },
     include: {
       userProjects: {
         include: { project: true }
@@ -55,8 +54,8 @@ export default async function ManagerDashboard() {
                 </div>
                 <div className="text-sm">
                   <span className="text-muted-foreground font-semibold">Assigned Projects: </span>
-                  {user.userProjects.length > 0 ? (
-                    <span className="text-primary">{user.userProjects.map(up => up.project.name).join(', ')}</span>
+                  {user.userProjects && user.userProjects.length > 0 ? (
+                    <span className="text-primary">{user.userProjects.map((up: any) => up.project?.name).join(', ')}</span>
                   ) : (
                     <span className="text-muted-foreground italic">None</span>
                   )}
