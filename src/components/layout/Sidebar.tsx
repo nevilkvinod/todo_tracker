@@ -9,8 +9,10 @@ import {
   Users,
   Calendar,
   Settings,
-  Activity
+  Activity,
+  LogOut
 } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/utils/cn';
 
 const navItems = [
@@ -22,6 +24,14 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+
+  if (pathname === '/login') return null;
+
+  const resolvedNavItems = [...navItems];
+  if (session?.user?.role === 'MANAGER') {
+    resolvedNavItems.push({ name: 'Manager', href: '/manager', icon: Users });
+  }
 
   return (
     <div className="flex flex-col h-screen w-64 bg-card border-r border-border text-card-foreground">
@@ -33,7 +43,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto mt-4">
-        {navItems.map((item) => {
+        {resolvedNavItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
           
@@ -56,7 +66,21 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-border">
-        {/* Placeholder for future auth logic */}
+        {session?.user ? (
+          <div className="flex flex-col space-y-3">
+            <div className="px-3">
+              <p className="text-sm font-medium">{session.user.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
+            </div>
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="flex items-center space-x-3 w-full rounded-md px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors"
+            >
+              <LogOut className="h-5 w-5" />
+              <span>Logout</span>
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -1,31 +1,54 @@
 import prisma from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 
-export const findActiveTasksByProject = async (projectId: string) => {
-  return prisma.task.findMany({
-    where: { 
-      projectId, 
-      deletedAt: null // Soft-delete filter
-    },
-    orderBy: { order: 'asc' },
-    include: { 
-      project: { select: { color: true } },
-      assignee: { select: { name: true, image: true } }
-    }
-  });
-};
+export class TaskRepository {
+  static async findById(id: string) {
+    return prisma.task.findUnique({
+      where: { id },
+      include: {
+        project: { select: { color: true } },
+        assignee: { select: { name: true, image: true, email: true } }
+      }
+    });
+  }
 
-export const createTask = async (data: Prisma.TaskUncheckedCreateInput) => {
-  return prisma.task.create({ data });
-};
+  static async findActiveTasksByProject(projectId: string) {
+    return prisma.task.findMany({
+      where: { 
+        projectId, 
+        deletedAt: null
+      },
+      orderBy: { order: 'asc' },
+      include: { 
+        project: { select: { color: true } },
+        assignee: { select: { name: true, image: true, email: true } }
+      }
+    });
+  }
 
-export const updateTask = async (id: string, data: Prisma.TaskUncheckedUpdateInput) => {
-  return prisma.task.update({ where: { id }, data });
-};
+  static async create(data: Prisma.TaskUncheckedCreateInput) {
+    return prisma.task.create({ 
+      data,
+      include: {
+        assignee: { select: { name: true, image: true, email: true } }
+      }
+    });
+  }
 
-export const softDeleteTask = async (id: string) => {
-  return prisma.task.update({
-    where: { id },
-    data: { deletedAt: new Date() }
-  });
-};
+  static async update(id: string, data: Prisma.TaskUncheckedUpdateInput) {
+    return prisma.task.update({ 
+      where: { id }, 
+      data,
+      include: {
+        assignee: { select: { name: true, image: true, email: true } }
+      }
+    });
+  }
+
+  static async softDelete(id: string) {
+    return prisma.task.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
+  }
+}
