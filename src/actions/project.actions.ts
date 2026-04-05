@@ -33,6 +33,8 @@ export async function createProjectAction(data: any) {
   try {
     const user = await requireAuth();
     const parsedData = ProjectSchema.parse(data);
+    console.log(`[DB Action] Creating project By ${user.id} - ${user.role}`);
+    console.log(`Data: `, parsedData);
     const project = await ProjectService.createProject(parsedData, user.id, user.role as string);
     revalidatePath('/');
     revalidatePath('/manager');
@@ -40,7 +42,8 @@ export async function createProjectAction(data: any) {
     revalidateTag('projects', 'default');
     return { success: true, data: project, error: null };
   } catch (error: any) {
-    return { success: false, data: null, error: error.message };
+    console.error("[DB Error] Project Create Failed:", error);
+    return { success: false, data: null, error: error?.issues ? JSON.stringify(error.issues) : error.message };
   }
 }
 
@@ -48,6 +51,8 @@ export async function updateProjectAction(id: string, data: any) {
   try {
     const user = await requireAuth();
     const parsedData = ProjectSchema.partial().parse(data);
+    console.log(`[DB Action] Updating project ${id} By ${user.id} - ${user.role}`);
+    console.log(`Update Data: `, parsedData);
     const project = await ProjectService.updateProject(id, parsedData, user.id, user.role as string);
     revalidatePath('/');
     revalidatePath('/manager');
@@ -55,13 +60,15 @@ export async function updateProjectAction(id: string, data: any) {
     revalidateTag('projects', 'default');
     return { success: true, data: project, error: null };
   } catch (error: any) {
-    return { success: false, data: null, error: error.message };
+    console.error("[DB Error] Project Update Failed:", error);
+    return { success: false, data: null, error: error?.issues ? JSON.stringify(error.issues) : error.message };
   }
 }
 
 export async function deleteProjectAction(id: string) {
   try {
     const user = await requireAuth();
+    console.log(`[DB Action] Deleting project ${id} By ${user.id} - ${user.role}`);
     const project = await ProjectService.deleteProject(id, user.id, user.role as string);
     revalidatePath('/');
     revalidatePath('/manager');
@@ -69,6 +76,7 @@ export async function deleteProjectAction(id: string) {
     revalidateTag('projects', 'default');
     return { success: true, data: project, error: null };
   } catch (error: any) {
+    console.error("[DB Error] Project Delete Failed:", error);
     return { success: false, data: null, error: error.message };
   }
 }

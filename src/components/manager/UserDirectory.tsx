@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { updateUserRoleAction, deleteUserAction, createUserAction } from '@/actions/user.actions';
-import { assignProjectAction, removeUserFromProjectAction } from '@/actions/project.actions';
 
 export function UserDirectory({ users, projects }: { users: any[], projects: any[] }) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -42,19 +41,6 @@ export function UserDirectory({ users, projects }: { users: any[], projects: any
     setErrorMsg('');
     const res = await deleteUserAction({ userId });
     if (!res.success) setErrorMsg(res.error || 'Failed to delete user');
-    setLoadingId(null);
-  };
-
-  const handleToggleProject = async (userId: string, projectId: string, hasProject: boolean) => {
-    setLoadingId(userId);
-    setErrorMsg('');
-    let res;
-    if (hasProject) {
-      res = await removeUserFromProjectAction({ assigneeId: userId, projectId });
-    } else {
-      res = await assignProjectAction({ assigneeId: userId, projectId });
-    }
-    if (!res?.success) setErrorMsg(res?.error || 'Failed to modify assignment');
     setLoadingId(null);
   };
 
@@ -134,29 +120,9 @@ export function UserDirectory({ users, projects }: { users: any[], projects: any
             </div>
 
             <div className="text-sm pt-2 border-t border-border">
-              <span className="text-muted-foreground font-semibold block mb-2">Manage Projects ({userProjectIds.length}): </span>
-              {projects.length === 0 ? <span className="text-xs italic text-muted-foreground">No projects exist</span> : (
-                <div className="flex flex-wrap gap-2">
-                  {projects.map(proj => {
-                    const assigned = userProjectIds.includes(proj.id);
-                    return (
-                      <button
-                        key={proj.id}
-                        disabled={loadingId === user.id}
-                        onClick={() => handleToggleProject(user.id, proj.id, assigned)}
-                        className={`text-xs px-2 py-1 rounded-full border transition-colors ${
-                          assigned 
-                            ? 'bg-primary text-primary-foreground border-primary hover:bg-red-500 hover:border-red-500'
-                            : 'bg-transparent text-muted-foreground border-border hover:border-primary hover:text-primary'
-                        } disabled:opacity-50`}
-                        title={assigned ? "Click to Remove" : "Click to Assign"}
-                      >
-                        {proj.name} {assigned ? '✓' : '+'}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
+              <span className="text-muted-foreground block">
+                {userProjectIds.length} active project assignments. Manage inside Project Editor.
+              </span>
             </div>
           </div>
         );

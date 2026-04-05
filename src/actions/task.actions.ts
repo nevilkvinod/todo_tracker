@@ -16,8 +16,8 @@ const TaskSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional().nullable(),
   status: z.enum(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE']).optional(),
-  order: z.number(),
-  dueDate: z.date().optional().nullable(),
+  order: z.number().optional().default(0),
+  dueDate: z.coerce.date().optional().nullable(),
   projectId: z.string().min(1, "Project ID is required"),
   assigneeId: z.string().optional().nullable(),
 });
@@ -34,17 +34,31 @@ export async function fetchTasksAction(projectId: string) {
   }
 }
 
+import { ProjectRepository } from "@/repositories/project.repository";
+
 export async function createTaskAction(data: any) {
   try {
     const user = await requireAuth();
     const parsedData = TaskSchema.parse(data);
+    
+    if (parsedData.assigneeId) {
+      const isAssigned = await ProjectRepository.checkAccess(parsedData.projectId, parsedData.assigneeId);
+      if (!isAssigned) {
+        throw new Error("Assignee must be a member of the project");
+      }
+    }
+
+    console.log(`[DB Action] Creating Task by ${user.id} - ${user.role}`);
+    console.log(`Task Data: `, parsedData);
+
     const task = await TaskService.createTask(parsedData, user.id, user.role as string);
     revalidatePath("/board");
     revalidatePath("/timeline");
     revalidateTag("board-tasks", "default");
     return { success: true, data: task, error: null };
   } catch (error: any) {
-    return { success: false, data: null, error: error.message };
+    console.error("[DB Error] Task Create Failed:", error);
+    return { success: false, data: null, error: error?.issues ? JSON.stringify(error.issues) : error.message };
   }
 }
 
@@ -52,25 +66,38 @@ export async function updateTaskAction(id: string, data: any) {
   try {
     const user = await requireAuth();
     const parsedData = TaskUpdateSchema.parse(data);
+    console.log(`[DB Action] Updating Task ${id} by ${user.id} - ${user.role}`);
+    console.log(`Task Update Data: `, parsedData);
+    
+    if (parsedData.assigneeId && parsedData.projectId) {
+      const isAssigned = await ProjectRepository.checkAccess(parsedData.projectId, parsedData.assigneeId);
+      if (!isAssigned) {
+        throw new Error("Assignee must be a member of the project");
+      }
+    }
+
     const task = await TaskService.updateTask(id, parsedData, user.id, user.role as string);
     revalidatePath("/board");
     revalidatePath("/timeline");
     revalidateTag("board-tasks", "default");
     return { success: true, data: task, error: null };
   } catch (error: any) {
-    return { success: false, data: null, error: error.message };
+    console.error("[DB Error] Task Update Failed:", error);
+    return { success: false, data: null, error: error?.issues ? JSON.stringify(error.issues) : error.message };
   }
 }
 
 export async function updateTaskStatusAction(id: string, status: string) {
   try {
     const user = await requireAuth();
+    console.log(`[DB Action] Updating Task Status ${id} to ${status} by ${user.id}`);
     const task = await TaskService.updateStatus(id, status, user.id, user.role as string);
     revalidatePath("/board");
     revalidatePath("/timeline");
     revalidateTag("board-tasks", "default");
     return { success: true, data: task, error: null };
   } catch (error: any) {
+    console.error("[DB Error] Task Status Update Failed:", error);
     return { success: false, data: null, error: error.message };
   }
 }
@@ -78,12 +105,14 @@ export async function updateTaskStatusAction(id: string, status: string) {
 export async function deleteTaskAction(id: string) {
   try {
     const user = await requireAuth();
+    console.log(`[DB Action] Deleting Task ${id} by ${user.id}`);
     const task = await TaskService.deleteTask(id, user.id, user.role as string);
     revalidatePath("/board");
     revalidatePath("/timeline");
     revalidateTag("board-tasks", "default");
     return { success: true, data: task, error: null };
   } catch (error: any) {
+    console.error("[DB Error] Task Delete Failed:", error);
     return { success: false, data: null, error: error.message };
   }
 }

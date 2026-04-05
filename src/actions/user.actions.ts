@@ -98,3 +98,47 @@ export async function deleteUserAction(data: any) {
     return { success: false, data: null, error: error.message };
   }
 }
+
+export async function searchUsersAction(query: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    
+    // allow both USER and MANAGER to search users (for assignments)
+    const users = await prisma.user.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { email: { contains: query, mode: 'insensitive' } }
+        ]
+      },
+      select: { id: true, name: true, email: true },
+      take: 10
+    });
+    return { success: true, data: users, error: null };
+  } catch (error: any) {
+    return { success: false, data: null, error: error.message };
+  }
+}
+
+export async function getProjectUsersAction(projectId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    
+    // Get users strictly assigned to this project
+    const users = await prisma.user.findMany({
+      where: {
+        deletedAt: null,
+        userProjects: {
+          some: { projectId }
+        }
+      },
+      select: { id: true, name: true, email: true }
+    });
+    return { success: true, data: users, error: null };
+  } catch (error: any) {
+    return { success: false, data: null, error: error.message };
+  }
+}

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { createProjectAction } from '@/actions/project.actions';
+import { ProjectCreateModal } from '@/components/board/ProjectCreateModal';
 
 export function ProjectList({ projects }: { projects: any[] }) {
   const [loading, setLoading] = useState(false);
@@ -9,6 +10,9 @@ export function ProjectList({ projects }: { projects: any[] }) {
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState('');
   const [color, setColor] = useState('#4F46E5');
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<any | null>(null);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +27,11 @@ export function ProjectList({ projects }: { projects: any[] }) {
       setColor('#4F46E5');
     }
     setLoading(false);
+  };
+
+  const openEditor = (project: any) => {
+    setProjectToEdit(project);
+    setIsModalOpen(true);
   };
 
   return (
@@ -85,19 +94,34 @@ export function ProjectList({ projects }: { projects: any[] }) {
       ) : (
         <div className="space-y-3 mt-4">
           {projects.map(project => (
-            <div key={project.id} className="p-3 bg-secondary/30 rounded-lg flex items-center space-x-3 border border-border/50">
-              <div 
-                className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm" 
-                style={{ backgroundColor: project.color || 'var(--primary)' }} 
-              />
-              <div className="min-w-0 flex-1">
-                <h3 className="font-medium truncate">{project.name}</h3>
-                <p className="text-xs text-muted-foreground">{project.status}</p>
+            <div key={project.id} className="p-3 bg-secondary/30 rounded-lg flex items-center justify-between border border-border/50 group">
+              <div className="flex items-center space-x-3 min-w-0 flex-1">
+                <div 
+                  className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm" 
+                  style={{ backgroundColor: project.color || 'var(--primary)' }} 
+                />
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium truncate">{project.name}</h3>
+                  <p className="text-xs text-muted-foreground">{project.status}</p>
+                </div>
               </div>
+              <button
+                onClick={() => openEditor(project)}
+                className="px-3 py-1 text-xs bg-secondary hover:bg-primary hover:text-primary-foreground border border-border rounded transition-colors opacity-0 group-hover:opacity-100"
+              >
+                Edit
+              </button>
             </div>
           ))}
         </div>
       )}
+
+      <ProjectCreateModal 
+        isOpen={isModalOpen}
+        editProject={projectToEdit}
+        onClose={() => { setIsModalOpen(false); setProjectToEdit(null); }}
+        onSave={() => {}} // Create happens inline here now
+      />
     </div>
   );
 }

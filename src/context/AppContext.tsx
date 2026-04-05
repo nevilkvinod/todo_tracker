@@ -75,7 +75,13 @@ export function AppProvider({ children, initialProjects = [], initialTasks = [] 
   };
 
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
-    // Optimistic UI Update
+    const res = await updateTaskStatusAction(taskId, newStatus);
+    if (!res?.success) {
+      console.error("[RBAC/Update Error]:", res?.error);
+      alert(res?.error || "Failed to update task status.");
+      return;
+    }
+
     setTasks(prevTasks => {
       const updated = [...prevTasks];
       const index = updated.findIndex(t => t.id === taskId);
@@ -85,28 +91,28 @@ export function AppProvider({ children, initialProjects = [], initialTasks = [] 
       if (oldStatus !== newStatus) {
         logAction('Move', updated[index].projectId, updated[index].title, `Status changed from ${oldStatus} to ${newStatus}`);
       }
-      updated[index] = { ...updated[index], status: newStatus };
+      updated[index] = res.data || { ...updated[index], status: newStatus };
       return updated;
     });
-    
-    // Server Mutation
-    await updateTaskStatusAction(taskId, newStatus);
   };
 
   const updateTask = async (taskId: string, updates: any) => {
-    // Optimistic UI Update
+    const res = await updateTaskAction(taskId, updates);
+    if (!res?.success) {
+      console.error("[RBAC/Update Error]:", res?.error);
+      alert(res?.error || "Failed to update task.");
+      return;
+    }
+
     setTasks(prevTasks => {
       const updated = [...prevTasks];
       const index = updated.findIndex(t => t.id === taskId);
       if (index === -1) return prevTasks;
       
       logAction('Update', updated[index].projectId, updated[index].title, `Task details modified`);
-      updated[index] = { ...updated[index], ...updates };
+      updated[index] = res.data || { ...updated[index], ...updates };
       return updated;
     });
-
-    // Server Mutation
-    await updateTaskAction(taskId, updates);
   };
 
   const addProject = (p: any) => {
@@ -114,6 +120,14 @@ export function AppProvider({ children, initialProjects = [], initialTasks = [] 
   };
 
   const updateProject = async (projectId: string, updates: any) => {
+    // Server Mutation
+    const res = await updateProjectAction(projectId, updates);
+    if (!res?.success) {
+      console.error("[RBAC/Update Error]:", res?.error);
+      alert(res?.error || "Failed to update project. Please verify you have Manager privileges.");
+      return;
+    }
+    
     setProjects(prevProjects => {
       const updated = [...prevProjects];
       const index = updated.findIndex(p => p.id === projectId);
@@ -122,34 +136,43 @@ export function AppProvider({ children, initialProjects = [], initialTasks = [] 
       return updated;
     });
     logAction('Update', projectId, 'N/A', `Project details modified`);
-    
-    // Server Mutation
-    await updateProjectAction(projectId, updates);
   };
 
   const deleteProject = async (projectId: string) => {
     if (confirm("Are you sure you want to completely delete this project?")) {
+      // Server Mutation
+      const res = await deleteProjectAction(projectId);
+      if (!res?.success) {
+        console.error("[RBAC/Delete Error]:", res?.error);
+        alert(res?.error || "Failed to delete project. Please verify you have Manager privileges.");
+        return;
+      }
+
       setProjects(prev => prev.filter(p => p.id !== projectId));
       setTasks(prev => prev.filter(t => t.projectId !== projectId));
       logAction('Delete', projectId, 'N/A', `Project permanently deleted`);
-      
-      // Server Mutation
-      await deleteProjectAction(projectId);
     }
   };
 
   const addTask = async (t: any) => {
-    // Server Mutation First to get ID, or optimistic
     const res = await createTaskAction(t);
-    if (res?.success) {
+    if (res?.success && res.data) {
       setTasks(prev => [...prev, res.data]);
       logAction('Create', t.projectId, t.title, `New Task added directly to ${t.status}`);
     } else {
-      console.error(res?.error);
+      console.error("[RBAC/Create Error]:", res?.error);
+      alert(res?.error || "Failed to create task.");
     }
   };
 
   const deleteTask = async (taskId: string) => {
+    const res = await deleteTaskAction(taskId);
+    if (!res?.success) {
+      console.error("[RBAC/Delete Error]:", res?.error);
+      alert(res?.error || "Failed to delete task.");
+      return;
+    }
+
     setTasks(prevTasks => {
        const task = prevTasks.find(t => t.id === taskId);
        if (task) {
@@ -157,9 +180,6 @@ export function AppProvider({ children, initialProjects = [], initialTasks = [] 
        }
        return prevTasks.filter(t => t.id !== taskId);
     });
-    
-    // Server Mutation
-    await deleteTaskAction(taskId);
   };
 
   return (
