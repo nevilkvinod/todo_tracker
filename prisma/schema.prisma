@@ -109,6 +109,10 @@ model Task {
   description String?
   status      TaskStatus @default(TODO)
   order       Float
+  priority    String     @default("Medium") // Critical, High, Medium, Low
+  completionPercentage Int @default(0)
+  startDate   DateTime?
+  endDate     DateTime?
   dueDate     DateTime?
   
   projectId   String

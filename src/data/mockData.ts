@@ -1,6 +1,6 @@
 import { addDays, subDays } from 'date-fns';
 
-export type TaskStatus = 'Yet to Start' | 'Work in Progress' | 'Final Stage' | 'On Hold' | 'Review' | 'Completed';
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE';
 
 export interface Project {
   id: string;
@@ -34,9 +34,9 @@ export const MOCK_PROJECTS: Project[] = [
 ];
 
 export const MOCK_TASKS: Task[] = [
-  { id: 't3', projectId: 'p1', title: 'Kanban DND Implementation', description: '', status: 'Yet to Start', priority: 'Critical', completionPercentage: 0, startDate: addDays(today, 3).toISOString(), endDate: addDays(today, 5).toISOString() },
-  { id: 't4', projectId: 'p2', title: 'Split-Pane Layout', description: '', status: 'Work in Progress', priority: 'High', completionPercentage: 40, startDate: today.toISOString(), endDate: addDays(today, 2).toISOString() },
-  { id: 't5', projectId: 'p2', title: 'Draggable Task Bars', description: '', status: 'Yet to Start', priority: 'Critical', completionPercentage: 0, startDate: addDays(today, 3).toISOString(), endDate: addDays(today, 7).toISOString() },
-  { id: 't6', projectId: 'p2', title: 'Zoom Toggle (Day/Week/Month)', description: '', status: 'On Hold', priority: 'Low', completionPercentage: 0, startDate: addDays(today, 8).toISOString(), endDate: addDays(today, 10).toISOString() },
-  { id: 't7', projectId: 'p1', title: 'Design Review', description: '', status: 'Review', priority: 'Medium', completionPercentage: 95, startDate: subDays(today, 2).toISOString(), endDate: today.toISOString() },
+  { id: 't3', projectId: 'p1', title: 'Kanban DND Implementation', description: '', status: 'TODO', priority: 'Critical', completionPercentage: 0, startDate: addDays(today, 3).toISOString(), endDate: addDays(today, 5).toISOString() },
+  { id: 't4', projectId: 'p2', title: 'Split-Pane Layout', description: '', status: 'IN_PROGRESS', priority: 'High', completionPercentage: 40, startDate: today.toISOString(), endDate: addDays(today, 2).toISOString() },
+  { id: 't5', projectId: 'p2', title: 'Draggable Task Bars', description: '', status: 'TODO', priority: 'Critical', completionPercentage: 0, startDate: addDays(today, 3).toISOString(), endDate: addDays(today, 7).toISOString() },
+  { id: 't6', projectId: 'p2', title: 'Zoom Toggle (Day/Week/Month)', description: '', status: 'TODO', priority: 'Low', completionPercentage: 0, startDate: addDays(today, 8).toISOString(), endDate: addDays(today, 10).toISOString() },
+  { id: 't7', projectId: 'p1', title: 'Design Review', description: '', status: 'REVIEW', priority: 'Medium', completionPercentage: 95, startDate: subDays(today, 2).toISOString(), endDate: today.toISOString() },
 ];

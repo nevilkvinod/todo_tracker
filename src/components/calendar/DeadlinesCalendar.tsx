@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { format, startOfWeek, addDays, startOfMonth, endOfMonth, endOfWeek, isSameMonth, isSameDay, parseISO } from 'date-fns';
+import { format, startOfWeek, addDays, startOfMonth, endOfMonth, endOfWeek, isSameMonth, isSameDay } from 'date-fns';
 import { useAppContext } from '@/context/AppContext';
 import { cn } from '@/utils/cn';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +26,7 @@ export function DeadlinesCalendar() {
       formattedDate = format(day, dateFormat);
       const cloneDay = day;
       
-      const dayTasks = tasks.filter(t => isSameDay(parseISO(t.endDate), cloneDay));
+      const dayTasks = tasks.filter(t => t.endDate ? isSameDay(new Date(t.endDate), cloneDay) : false);
       const criticalTasks = dayTasks.filter(t => t.priority === 'Critical');
 
       days.push(

@@ -23,16 +23,24 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 
 const COLUMNS: TaskStatus[] = [
-  'Yet to Start', 
-  'Work in Progress', 
-  'Final Stage', 
-  'On Hold', 
-  'Review', 
-  'Completed'
+  'TODO',
+  'IN_PROGRESS',
+  'REVIEW',
+  'DONE'
 ];
+
+const getColumnLabel = (status: string) => {
+  switch (status) {
+    case 'TODO': return 'To Do';
+    case 'IN_PROGRESS': return 'In Progress';
+    case 'REVIEW': return 'Review';
+    case 'DONE': return 'Done';
+    default: return status;
+  }
+};
 
 interface SortableTaskCardProps {
   task: Task;
@@ -73,25 +81,25 @@ function SortableTaskCard({ task, project, onOpenEdit }: SortableTaskCardProps) 
               )}
             </div>
             <Badge variant={task.priority === 'Critical' ? 'destructive' : task.priority === 'High' ? 'default' : 'secondary'}>
-              {task.priority}
+              {task.priority || 'Medium'}
             </Badge>
           </div>
 
           <div className="mt-4 mb-2">
             <div className="flex justify-between text-xs mb-1 text-muted-foreground">
               <span>Progress</span>
-              <span>{task.completionPercentage}%</span>
+              <span>{task.completionPercentage || 0}%</span>
             </div>
             <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
               <div 
                 className={`h-full ${task.completionPercentage === 100 ? 'bg-emerald-500' : ''}`} 
-                style={{ width: `${task.completionPercentage}%`, backgroundColor: task.completionPercentage === 100 ? undefined : (project?.color || 'var(--primary)') }} 
+                style={{ width: `${task.completionPercentage || 0}%`, backgroundColor: task.completionPercentage === 100 ? undefined : (project?.color || 'var(--primary)') }} 
               />
             </div>
           </div>
 
           <div className="flex justify-between text-[10px] text-muted-foreground mt-3 pt-2 border-t border-border/50">
-            <span>{format(new Date(task.startDate), 'MMM d')} - {format(new Date(task.endDate), 'MMM d')}</span>
+            <span>{format(task.startDate ? new Date(task.startDate) : new Date(), 'MMM d')} - {format(task.endDate ? new Date(task.endDate) : addDays(new Date(), 7), 'MMM d')}</span>
           </div>
 
         </CardContent>
@@ -117,7 +125,7 @@ function Column({ id, status, tasks, projects, onOpenEdit, onOpenCreate }: { id:
   return (
     <div className="flex flex-col min-w-[280px] max-w-[280px] flex-1 bg-secondary/10 rounded-xl border border-border overflow-hidden">
       <div className="p-4 border-b border-border bg-secondary/20 flex justify-between items-center group">
-        <h3 className="font-semibold text-sm flex-1">{status}</h3>
+        <h3 className="font-semibold text-sm flex-1">{getColumnLabel(status)}</h3>
         <Badge variant="secondary" className="bg-background/50 mr-2">{tasks.length}</Badge>
         <button onClick={() => onOpenCreate(status)} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground">
           <Plus size={16} />
@@ -297,7 +305,7 @@ export function KanbanBoard() {
                         </span>
                       )}
                     </div>
-                    <Badge className="mt-2" variant="secondary">{activeTask.priority}</Badge>
+                    <Badge className="mt-2" variant="secondary">{activeTask.priority || 'Medium'}</Badge>
                   </CardContent>
                 </Card>
               </div>

@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Task } from '@/data/mockData';
-import { format, differenceInDays, addDays, min, max, isSameDay } from 'date-fns';
+import { format, differenceInDays, differenceInSeconds, addDays, addHours, min, max, isSameDay } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/utils/cn';
 
@@ -22,8 +22,8 @@ export function GanttChart() {
       const today = new Date();
       return { start: addDays(today, -15), end: addDays(today, 30), totalDays: 45 };
     }
-    const startDates = tasks.map(t => new Date(t.startDate));
-    const endDates = tasks.map(t => new Date(t.endDate));
+    const startDates = tasks.map(t => t.startDate ? new Date(t.startDate) : new Date());
+    const endDates = tasks.map(t => t.endDate ? new Date(t.endDate) : addDays(new Date(), 7));
     
     // Pad the timeline a bit
     const minStart = addDays(min(startDates), -10);
@@ -62,20 +62,20 @@ export function GanttChart() {
       e.preventDefault();
       
       const deltaX = e.clientX - dragState.startX;
-      const daysDelta = Math.round(deltaX / currentTickWidth);
+      const hoursDelta = Math.round((deltaX / currentTickWidth) * 24);
       
       let newStart = dragState.initialStart;
       let newEnd = dragState.initialEnd;
 
       if (dragState.type === 'move') {
-        newStart = addDays(dragState.initialStart, daysDelta);
-        newEnd = addDays(dragState.initialEnd, daysDelta);
+        newStart = addHours(dragState.initialStart, hoursDelta);
+        newEnd = addHours(dragState.initialEnd, hoursDelta);
       } else if (dragState.type === 'resizeLeft') {
-        newStart = addDays(dragState.initialStart, daysDelta);
-        if (newStart > newEnd) newStart = newEnd; // Prevent inversion
+        newStart = addHours(dragState.initialStart, hoursDelta);
+        if (newStart >= newEnd) newStart = addHours(newEnd, -1); // Force MIN 1 hr duration
       } else if (dragState.type === 'resizeRight') {
-        newEnd = addDays(dragState.initialEnd, daysDelta);
-        if (newEnd < newStart) newEnd = newStart;
+        newEnd = addHours(dragState.initialEnd, hoursDelta);
+        if (newEnd <= newStart) newEnd = addHours(newStart, 1);
       }
 
       setTempTasks(prev => ({
@@ -112,8 +112,8 @@ export function GanttChart() {
       taskId: task.id,
       type,
       startX: e.clientX,
-      initialStart: new Date(task.startDate),
-      initialEnd: new Date(task.endDate),
+      initialStart: task.startDate ? new Date(task.startDate) : new Date(),
+      initialEnd: task.endDate ? new Date(task.endDate) : addDays(new Date(), 7),
     });
   };
 
@@ -171,10 +171,10 @@ export function GanttChart() {
                   {task.title}
                 </div>
                 <div className="w-16 flex items-center">
-                  <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: getPriorityColor(task.priority) }} />
-                  <span className="text-[10px] text-muted-foreground">{task.priority.substring(0,4)}</span>
+                  <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: getPriorityColor(task.priority || 'Medium') }} />
+                  <span className="text-[10px] text-muted-foreground">{(task.priority || 'Medium').substring(0,4)}</span>
                 </div>
-                <div className="w-12 text-right text-xs font-semibold">{task.completionPercentage}%</div>
+                <div className="w-12 text-right text-xs font-semibold">{task.completionPercentage || 0}%</div>
               </div>
             ))}
           </div>
@@ -222,7 +222,7 @@ export function GanttChart() {
 
             {/* Task Bar Rows */}
             {tasks.map((task, index) => {
-              const displayDates = tempTasks[task.id] || { start: new Date(task.startDate), end: new Date(task.endDate) };
+              const displayDates = tempTasks[task.id] || { start: task.startDate ? new Date(task.startDate) : new Date(), end: task.endDate ? new Date(task.endDate) : addDays(new Date(), 7) };
               const startOffset = differenceInDays(displayDates.start, timelineBounds.start) * currentTickWidth;
               // +1 to span the full end day
               const width = (differenceInDays(displayDates.end, displayDates.start) + 1) * currentTickWidth; 
@@ -254,7 +254,7 @@ export function GanttChart() {
                     <div 
                       className="absolute left-0 top-0 bottom-0 rounded-l-md"
                       style={{ 
-                        width: `${task.completionPercentage}%`,
+                        width: `${task.completionPercentage || 0}%`,
                         backgroundColor: barColor,
                         opacity: 0.8
                       }} 
@@ -276,6 +276,17 @@ export function GanttChart() {
                       className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-foreground/20 rounded-r-md z-10"
                       onPointerDown={(e) => handlePointerDown(e, task, 'resizeRight')}
                     />
+
+                    {/* Tooltip on Hover */}
+                    <div className="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-lg pointer-events-none z-50 whitespace-nowrap transition-opacity">
+                      {(() => {
+                        const totalSeconds = differenceInSeconds(displayDates.end, displayDates.start);
+                        const h = Math.floor(totalSeconds / 3600);
+                        const m = Math.floor((totalSeconds % 3600) / 60);
+                        const s = totalSeconds % 60;
+                        return `Total Time: ${h}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
+                      })()}
+                    </div>
                   </div>
 
                 </div>

@@ -18,6 +18,10 @@ const TaskSchema = z.object({
   status: z.enum(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE']).optional(),
   order: z.number().optional().default(0),
   dueDate: z.coerce.date().optional().nullable(),
+  startDate: z.coerce.date().optional().nullable(),
+  endDate: z.coerce.date().optional().nullable(),
+  priority: z.enum(['Low', 'Medium', 'High', 'Critical']).optional().default('Medium'),
+  completionPercentage: z.number().min(0).max(100).optional().default(0),
   projectId: z.string().min(1, "Project ID is required"),
   assigneeId: z.string().optional().nullable(),
 });

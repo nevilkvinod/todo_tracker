@@ -75,13 +75,7 @@ export function AppProvider({ children, initialProjects = [], initialTasks = [] 
   };
 
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
-    const res = await updateTaskStatusAction(taskId, newStatus);
-    if (!res?.success) {
-      console.error("[RBAC/Update Error]:", res?.error);
-      alert(res?.error || "Failed to update task status.");
-      return;
-    }
-
+    // Optimistic Update
     setTasks(prevTasks => {
       const updated = [...prevTasks];
       const index = updated.findIndex(t => t.id === taskId);
@@ -91,28 +85,52 @@ export function AppProvider({ children, initialProjects = [], initialTasks = [] 
       if (oldStatus !== newStatus) {
         logAction('Move', updated[index].projectId, updated[index].title, `Status changed from ${oldStatus} to ${newStatus}`);
       }
-      updated[index] = res.data || { ...updated[index], status: newStatus };
+      updated[index] = { ...updated[index], status: newStatus };
       return updated;
     });
+
+    // Background server call
+    const res = await updateTaskStatusAction(taskId, newStatus);
+    if (!res?.success) {
+      console.error("[RBAC/Update Error]:", res?.error);
+      alert(res?.error || "Failed to update task status.");
+      // Rollback logic could be added here if needed
+    } else {
+       // Optional: Re-sync with exact server data
+       setTasks(prevTasks => {
+          const updated = [...prevTasks];
+          const index = updated.findIndex(t => t.id === taskId);
+          if (index !== -1) updated[index] = res.data;
+          return updated;
+       });
+    }
   };
 
   const updateTask = async (taskId: string, updates: any) => {
-    const res = await updateTaskAction(taskId, updates);
-    if (!res?.success) {
-      console.error("[RBAC/Update Error]:", res?.error);
-      alert(res?.error || "Failed to update task.");
-      return;
-    }
-
+    // Optimistic Update
     setTasks(prevTasks => {
       const updated = [...prevTasks];
       const index = updated.findIndex(t => t.id === taskId);
       if (index === -1) return prevTasks;
       
       logAction('Update', updated[index].projectId, updated[index].title, `Task details modified`);
-      updated[index] = res.data || { ...updated[index], ...updates };
+      updated[index] = { ...updated[index], ...updates };
       return updated;
     });
+
+    const res = await updateTaskAction(taskId, updates);
+    if (!res?.success) {
+      console.error("[RBAC/Update Error]:", res?.error);
+      alert(res?.error || "Failed to update task.");
+    } else {
+       // Optional: Re-sync with exact server data
+       setTasks(prevTasks => {
+          const updated = [...prevTasks];
+          const index = updated.findIndex(t => t.id === taskId);
+          if (index !== -1) updated[index] = res.data;
+          return updated;
+       });
+    }
   };
 
   const addProject = (p: any) => {
