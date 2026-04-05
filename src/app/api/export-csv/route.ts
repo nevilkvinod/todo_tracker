@@ -44,13 +44,20 @@ export async function GET(request: Request) {
 
     const csvRows = [];
     // User_ID, Date, Check_In_Time, Check_Out_Time, Daily_Total_Duration
-    csvRows.push(['User_ID', 'User_Name', 'Date', 'Check_In_Time', 'Check_Out_Time', 'Daily_Total_Duration_Mins']);
+    csvRows.push(['User_ID', 'User_Name', 'Date', 'Check_In_Time', 'Check_Out_Time', 'Daily_Total_Duration_Formatted', 'Daily_Total_Duration_Seconds']);
 
     for (const log of logs) {
       const dateStr = new Date(log.loginAt).toLocaleDateString('en-US');
       const inTime = new Date(log.loginAt).toLocaleTimeString('en-US');
       const outTime = log.logoutAt ? new Date(log.logoutAt).toLocaleTimeString('en-US') : 'Active';
       const duration = log.duration ? log.duration.toString() : '';
+      let durationFormatted = '';
+      if (log.duration) {
+         const h = Math.floor(log.duration / 3600);
+         const m = Math.floor((log.duration % 3600) / 60);
+         const s = log.duration % 60;
+         durationFormatted = `${h}h ${m}m ${s}s`;
+      }
 
       csvRows.push([
         log.user.id,
@@ -58,6 +65,7 @@ export async function GET(request: Request) {
         dateStr,
         inTime,
         outTime,
+        durationFormatted,
         duration
       ]);
     }

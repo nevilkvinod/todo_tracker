@@ -80,13 +80,13 @@ export function ActivityDashboard({ userRole, userId }: { userRole: string, user
     logs.forEach(log => {
       const dStr = new Date(log.loginAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       if (dailyData[dStr] !== undefined) {
-         dailyData[dStr] += ((log.duration || 0) / 60);
+         dailyData[dStr] += ((log.duration || 0) / 3600); // duration is now in seconds
       }
     });
 
     const chartData = Object.keys(dailyData).map(k => ({
       date: k,
-      hours: parseFloat(dailyData[k].toFixed(1))
+      hours: dailyData[k] // Exact fractional hours
     }));
 
     return (
@@ -95,13 +95,31 @@ export function ActivityDashboard({ userRole, userId }: { userRole: string, user
           <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
             <XAxis dataKey="date" tick={{fontSize: 12, fill: '#888'}} axisLine={false} tickLine={false} />
-            <YAxis tick={{fontSize: 12, fill: '#888'}} axisLine={false} tickLine={false} />
+            <YAxis 
+              tickFormatter={(value: any) => {
+                const numValue = Number(value) || 0;
+                const s = Math.round(numValue * 3600);
+                const h = Math.floor(s / 3600);
+                const m = Math.floor((s % 3600) / 60);
+                const sec = s % 60;
+                return `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+              }}
+              tick={{fontSize: 12, fill: '#888'}} axisLine={false} tickLine={false} 
+            />
             <Tooltip 
+              formatter={(value: any) => {
+                const numValue = Number(value) || 0;
+                const s = Math.round(numValue * 3600);
+                const h = Math.floor(s / 3600);
+                const m = Math.floor((s % 3600) / 60);
+                const sec = s % 60;
+                return [`${h}h ${m.toString().padStart(2, '0')}m ${sec.toString().padStart(2, '0')}s`, 'Total Time'];
+              }}
               cursor={{fill: 'rgba(255,255,255,0.05)'}} 
               contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', borderRadius: '8px' }}
             />
             <ReferenceLine y={8} label={{ position: 'top', value: 'Target (8h)', fill: '#6b7280', fontSize: 12 }} stroke="#4f46e5" strokeDasharray="3 3" />
-            <Bar dataKey="hours" name="Total Hours" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+            <Bar dataKey="hours" name="Total Time" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -181,9 +199,9 @@ export function ActivityDashboard({ userRole, userId }: { userRole: string, user
               <CardContent className="pt-6">
                 <div className="flex items-center space-x-2 text-muted-foreground mb-2">
                   <CalendarDays className="w-4 h-4" />
-                  <span className="text-sm font-medium">Total Hours</span>
+                  <span className="text-sm font-medium">Total Tracked Time</span>
                 </div>
-                <div className="text-2xl font-bold">{stats?.totalHours || 0}h</div>
+                <div className="text-2xl font-bold">{stats?.totalHoursStr || '0h 0m 0s'}</div>
               </CardContent>
             </Card>
             <Card>
@@ -208,7 +226,7 @@ export function ActivityDashboard({ userRole, userId }: { userRole: string, user
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Daily Hours vs Target</CardTitle>
+              <CardTitle className="text-lg">Daily Time vs Target</CardTitle>
             </CardHeader>
             <CardContent>
               {renderTimeline()}
@@ -248,7 +266,7 @@ export function ActivityDashboard({ userRole, userId }: { userRole: string, user
                           <td className="py-3 px-4">{loginDate.toLocaleTimeString()}</td>
                           <td className="py-3 px-4">{log.logoutAt ? new Date(log.logoutAt).toLocaleTimeString() : '-'}</td>
                           <td className="py-3 px-4">
-                            {log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}
+                            {log.duration ? `${Math.floor(log.duration / 3600)}h ${Math.floor((log.duration % 3600) / 60)}m ${log.duration % 60}s` : '-'}
                           </td>
                           <td className="py-3 px-4">
                             {log.logoutAt ? (

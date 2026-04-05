@@ -46,13 +46,13 @@ export class ActivityService {
 
     const logoutAt = new Date();
     const durationMs = logoutAt.getTime() - activity.loginAt.getTime();
-    const durationMinutes = Math.floor(durationMs / 60000);
+    const durationSeconds = Math.floor(durationMs / 1000);
 
     return await prisma.loginActivity.update({
       where: { id: activity.id },
       data: {
         logoutAt,
-        duration: durationMinutes,
+        duration: durationSeconds,
       }
     });
   }
@@ -121,14 +121,17 @@ export class ActivityService {
 
     const activities = await prisma.loginActivity.findMany({ where });
 
-    let totalDuration = 0;
+    let totalDurationSeconds = 0;
     let activeSessions = 0;
     // We determine distinct active days
     const uniqueDays = new Set<string>();
 
     for (const act of activities) {
-      if (act.duration) {
-        totalDuration += act.duration;
+      if (act.logoutAt) {
+        totalDurationSeconds += Math.floor((act.logoutAt.getTime() - act.loginAt.getTime()) / 1000);
+      } else if (act.duration) {
+        // Fallback if data is weird
+        totalDurationSeconds += act.duration;
       }
       
       if (!act.logoutAt) {
@@ -139,11 +142,17 @@ export class ActivityService {
       uniqueDays.add(dayStr);
     }
 
-    const totalHours = totalDuration / 60;
-    const avgHoursPerDay = uniqueDays.size > 0 ? totalHours / uniqueDays.size : 0;
+    const tHours = Math.floor(totalDurationSeconds / 3600);
+    const tMinutes = Math.floor((totalDurationSeconds % 3600) / 60);
+    const tSeconds = totalDurationSeconds % 60;
+    const totalHoursStr = `${tHours}h ${tMinutes}m ${tSeconds}s`;
+
+    const totalHoursFloat = totalDurationSeconds / 3600;
+    const avgHoursPerDay = uniqueDays.size > 0 ? totalHoursFloat / uniqueDays.size : 0;
 
     return {
-      totalHours: parseFloat(totalHours.toFixed(1)),
+      totalHoursStr,
+      totalHours: parseFloat(totalHoursFloat.toFixed(2)),
       avgHoursPerDay: parseFloat(avgHoursPerDay.toFixed(1)),
       activeSessions,
       daysTracked: uniqueDays.size
