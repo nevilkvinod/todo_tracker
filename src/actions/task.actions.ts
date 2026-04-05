@@ -62,6 +62,19 @@ export async function updateTaskAction(id: string, data: any) {
   }
 }
 
+export async function updateTaskStatusAction(id: string, status: string) {
+  try {
+    const user = await requireAuth();
+    const task = await TaskService.updateStatus(id, status, user.id, user.role as string);
+    revalidatePath("/board");
+    revalidatePath("/timeline");
+    revalidateTag("board-tasks", "default");
+    return { success: true, data: task, error: null };
+  } catch (error: any) {
+    return { success: false, data: null, error: error.message };
+  }
+}
+
 export async function deleteTaskAction(id: string) {
   try {
     const user = await requireAuth();

@@ -5,27 +5,14 @@ import { useAppContext } from "@/context/AppContext";
 import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 import { DashboardAnalytics } from "@/components/dashboard/DashboardAnalytics";
 import { GanttChart } from "@/components/timeline/GanttChart";
-import { ProjectCreateModal } from "@/components/board/ProjectCreateModal";
 import { ProjectsListPanel } from "@/components/dashboard/ProjectsListPanel";
 import { exportTrackerData, exportActivityLogs } from "@/utils/exportUtils";
-import { SettingsModal } from "@/components/layout/SettingsModal";
 import { Button } from "@/components/ui/button";
-import { Plus, Download, History, Cloud, CloudOff, CloudCog, Settings, RefreshCw } from "lucide-react";
+import { Download, History, ListTodo } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
-import { Project } from '@/data/mockData';
 
 export default function Home() {
-  const { projects, tasks, logs, addProject, updateProject, syncStatus, lastSyncTime, githubAuth, setGithubAuth, syncNow } = useAppContext();
-  const [isProjectModalOpen, setProjectModalOpen] = useState(false);
-  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
-  const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
-
-  const StatusIcon = () => {
-    if (syncStatus === 'syncing') return <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />;
-    if (syncStatus === 'synced') return <Cloud className="h-4 w-4 text-emerald-500" />;
-    if (syncStatus === 'error' || syncStatus === 'rate_limit') return <CloudOff className="h-4 w-4 text-red-500" />;
-    return <CloudCog className="h-4 w-4 text-muted-foreground" />;
-  };
+  const { projects, tasks, logs } = useAppContext();
 
   return (
     <div className="flex-col md:flex h-full overflow-y-auto pb-10">
@@ -36,41 +23,19 @@ export default function Home() {
           <div>
             <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
               Dashboard 
-              <div className="flex flex-col">
-                <span className="flex items-center gap-1.5 text-xs font-normal px-2 py-1 bg-secondary/50 rounded-full border border-border">
-                  <StatusIcon /> 
-                  {syncStatus === 'syncing' && 'Syncing...'}
-                  {syncStatus === 'synced' && 'Synced to Cloud'}
-                  {syncStatus === 'error' && 'Sync Failed'}
-                  {syncStatus === 'rate_limit' && 'API Limited'}
-                  {syncStatus === 'idle' && 'No Cloud Linked'}
-                </span>
-                {lastSyncTime && syncStatus === 'synced' && (
-                  <span className="text-[9px] text-muted-foreground ml-2 mt-0.5">
-                    Last: {new Date(lastSyncTime).toLocaleTimeString()}
-                  </span>
-                )}
-              </div>
+              <span className="flex items-center gap-1.5 text-xs font-normal px-2 py-1 bg-secondary/50 rounded-full border border-border">
+                <ListTodo className="h-4 w-4 text-primary" /> 
+                Live Context
+              </span>
             </h2>
             <p className="text-muted-foreground">Personal Headquarters & Tracker Overview</p>
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="icon" onClick={() => setSettingsModalOpen(true)} title="Cloud Sync Settings">
-              <Settings className="h-4 w-4" />
-            </Button>
-            {githubAuth && (
-              <Button variant="outline" size="icon" onClick={syncNow} title="Force Sync Now">
-                <RefreshCw className={`h-4 w-4 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
-              </Button>
-            )}
             <Button variant="outline" onClick={() => exportActivityLogs(logs)}>
               <History className="mr-2 h-4 w-4" /> Export Logs
             </Button>
             <Button variant="secondary" onClick={() => exportTrackerData(projects, tasks)}>
               <Download className="mr-2 h-4 w-4" /> Backup CSV
-            </Button>
-            <Button onClick={() => { setProjectToEdit(null); setProjectModalOpen(true); }}>
-              <Plus className="mr-2 h-4 w-4" /> New Project
             </Button>
           </div>
         </div>
@@ -83,7 +48,7 @@ export default function Home() {
           
           {/* Projects Management Panel */}
           <div className="col-span-1 lg:col-span-3">
-             <ProjectsListPanel onEditProject={(p) => { setProjectToEdit(p); setProjectModalOpen(true); }} />
+             <ProjectsListPanel onEditProject={() => {}} />
           </div>
 
           {/* Timeline View */}
@@ -123,21 +88,6 @@ export default function Home() {
 
         </div>
       </div>
-
-      <ProjectCreateModal 
-        isOpen={isProjectModalOpen} 
-        onClose={() => { setProjectModalOpen(false); setProjectToEdit(null); }} 
-        onSave={addProject}
-        editProject={projectToEdit}
-        onEditSave={updateProject}
-      />
-
-      <SettingsModal 
-        isOpen={isSettingsModalOpen}
-        currentAuth={githubAuth || { token: '', repo: '', branch: 'main' }}
-        onClose={() => setSettingsModalOpen(false)}
-        onSave={setGithubAuth}
-      />
     </div>
   );
 }

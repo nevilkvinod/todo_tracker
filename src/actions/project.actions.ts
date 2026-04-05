@@ -82,11 +82,15 @@ export async function assignProjectAction(data: any) {
   try {
     const user = await requireAuth();
     const { projectId, assigneeId } = AssignSchema.parse(data);
+    
+    console.log(`[DB Action] Assigning user ${assigneeId} to project ${projectId} by ${user.id}`);
     await ProjectService.assignUser(projectId, assigneeId, user as any);
+    
     revalidatePath('/manager');
     revalidateTag('projects', 'default');
     return { success: true, data: null, error: null };
   } catch (error: any) {
+    console.error("[DB Error] Assignment Failed:", error.message);
     return { success: false, data: null, error: error.message };
   }
 }
@@ -95,11 +99,15 @@ export async function removeUserFromProjectAction(data: any) {
   try {
     const user = await requireAuth();
     const { projectId, assigneeId } = AssignSchema.parse(data);
+    
+    console.log(`[DB Action] Removing user ${assigneeId} from project ${projectId} by ${user.id}`);
     await ProjectService.removeUser(projectId, assigneeId, user as any);
+    
     revalidatePath('/manager');
     revalidateTag('projects', 'default');
     return { success: true, data: null, error: null };
   } catch (error: any) {
+    console.error("[DB Error] Removal Failed:", error.message);
     return { success: false, data: null, error: error.message };
   }
 }

@@ -12,6 +12,20 @@ export class TaskRepository {
     });
   }
 
+  static async findAllForProjects(projectIds: string[]) {
+    return prisma.task.findMany({
+      where: {
+        projectId: { in: projectIds },
+        deletedAt: null
+      },
+      orderBy: { order: 'asc' },
+      include: {
+        project: { select: { color: true, name: true } },
+        assignee: { select: { name: true, image: true, email: true } }
+      }
+    });
+  }
+
   static async findActiveTasksByProject(projectId: string) {
     return prisma.task.findMany({
       where: { 

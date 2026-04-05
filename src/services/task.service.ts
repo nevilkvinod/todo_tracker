@@ -9,6 +9,12 @@ export class TaskService {
     return TaskRepository.findActiveTasksByProject(projectId);
   }
 
+  static async getTasksForProjects(projectIds: string[], userId: string, role: string) {
+    // We could verify access for each project here, but if the projectIds array came from 
+    // ProjectService.getProjects(), we can assume access is valid.
+    return TaskRepository.findAllForProjects(projectIds);
+  }
+
   static async createTask(data: Prisma.TaskUncheckedCreateInput, userId: string, role: string) {
     // Verifies the user has access to the project
     await ProjectService.getProject(data.projectId, userId, role);

@@ -1,9 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { Project, Task, MOCK_PROJECTS, MOCK_TASKS } from '@/data/mockData';
-import { GithubAuth, GithubSyncPayload, fetchFromGithub, pushToGithub } from '@/utils/githubSync';
-import { ConflictModal } from '@/components/layout/ConflictModal';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { updateTaskAction, updateTaskStatusAction, createTaskAction, deleteTaskAction } from '@/actions/task.actions';
+import { updateProjectAction, deleteProjectAction } from '@/actions/project.actions';
 
 export interface ActionLog {
   id: string;
@@ -14,188 +13,48 @@ export interface ActionLog {
   details: string;
 }
 
-export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'rate_limit';
-
 interface AppContextType {
-  projects: Project[];
-  tasks: Task[];
+  projects: any[]; 
+  tasks: any[];
   logs: ActionLog[];
   
-  // Settings & Sync
-  syncStatus: SyncStatus;
+  syncStatus: string;
   lastSyncTime: string | null;
-  githubAuth: GithubAuth | null;
-  setGithubAuth: (auth: GithubAuth | null) => void;
+  githubAuth: null;
+  setGithubAuth: (auth: null) => void;
   syncNow: () => void;
 
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
-  updateTaskStatus: (taskId: string, newStatus: Task['status']) => void;
-  updateTask: (taskId: string, updates: Partial<Task>) => void;
-  updateProject: (projectId: string, updates: Partial<Project>) => void;
-  addProject: (project: Omit<Project, 'id' | 'progress'>) => void;
+  setTasks: React.Dispatch<React.SetStateAction<any[]>>;
+  updateTaskStatus: (taskId: string, newStatus: string) => void;
+  updateTask: (taskId: string, updates: any) => void;
+  updateProject: (projectId: string, updates: any) => void;
+  addProject: (project: any) => void;
   deleteProject: (projectId: string) => void;
-  addTask: (task: Omit<Task, 'id'>) => void;
+  addTask: (task: any) => void;
   deleteTask: (taskId: string) => void;
   logAction: (action: string, projectId: string | null, taskTitle: string, details: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [isHydrated, setIsHydrated] = useState(false);
+export function AppProvider({ children, initialProjects = [], initialTasks = [] }: { children: React.ReactNode, initialProjects?: any[], initialTasks?: any[] }) {
   
-  const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
-  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
+  const [projects, setProjects] = useState<any[]>(initialProjects);
+  const [tasks, setTasks] = useState<any[]>(initialTasks);
   const [logs, setLogs] = useState<ActionLog[]>([]);
 
-  // Local state timeline
-  const [localTimestamp, setLocalTimestamp] = useState<string | null>(null);
+  // Keep client state completely synchronized with layout passes
+  useEffect(() => {
+    setProjects(initialProjects);
+    setTasks(initialTasks);
+  }, [initialProjects, initialTasks]);
 
-  // Cloud Sync properties
-  const [githubAuth, setGithubAuth] = useState<GithubAuth | null>(null);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [githubAuth, setGithubAuth] = useState(null);
+  const [syncStatus, setSyncStatus] = useState('idle');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-  const [githubSha, setGithubSha] = useState<string | null>(null);
-  
-  const [pendingSync, setPendingSync] = useState(false);
-  const [conflictData, setConflictData] = useState<GithubSyncPayload | null>(null);
 
-  const isRemotePullRef = useRef(false);
+  const syncNow = () => {};
 
-  // Initial Hydration from Local Storage
-  useEffect(() => {
-    const savedProjects = localStorage.getItem('tracker_projects');
-    const savedTasks = localStorage.getItem('tracker_tasks');
-    const savedLogs = localStorage.getItem('tracker_logs');
-    const savedTs = localStorage.getItem('tracker_timestamp');
-    const savedAuth = localStorage.getItem('tracker_github_auth');
-    const savedSha = localStorage.getItem('tracker_github_sha');
-
-    if (savedProjects) setProjects(JSON.parse(savedProjects));
-    if (savedTasks) setTasks(JSON.parse(savedTasks));
-    if (savedLogs) setLogs(JSON.parse(savedLogs));
-    if (savedTs) setLocalTimestamp(savedTs);
-    if (savedSha) setGithubSha(savedSha);
-
-    let auth = null;
-    if (savedAuth) {
-      auth = JSON.parse(savedAuth);
-      setGithubAuth(auth);
-    }
-    
-    setIsHydrated(true);
-
-    if (auth) {
-      executePull(auth, savedTs);
-    }
-  }, []);
-
-  // Save changes to local storage instantly
-  useEffect(() => {
-    if (isHydrated) {
-      localStorage.setItem('tracker_projects', JSON.stringify(projects));
-      localStorage.setItem('tracker_tasks', JSON.stringify(tasks));
-      localStorage.setItem('tracker_logs', JSON.stringify(logs));
-      if (localTimestamp) localStorage.setItem('tracker_timestamp', localTimestamp);
-      if (githubAuth) localStorage.setItem('tracker_github_auth', JSON.stringify(githubAuth));
-      if (githubSha) localStorage.setItem('tracker_github_sha', githubSha);
-    }
-  }, [projects, tasks, logs, localTimestamp, githubAuth, githubSha, isHydrated]);
-
-  // Push Debouncer
-  useEffect(() => {
-    if (!pendingSync || !githubAuth || conflictData) return;
-    
-    setSyncStatus('syncing');
-    const timer = setTimeout(async () => {
-      try {
-        const payload: GithubSyncPayload = {
-          version: 1,
-          lastUpdated: localTimestamp || new Date().toISOString(),
-          projects,
-          tasks,
-          logs
-        };
-        const newSha = await pushToGithub(githubAuth, payload, githubSha);
-        setGithubSha(newSha);
-        setSyncStatus('synced');
-        setLastSyncTime(new Date().toISOString());
-        setPendingSync(false);
-      } catch (err: any) {
-        if (err.message === 'rate_limit') setSyncStatus('rate_limit');
-        else setSyncStatus('error');
-      }
-    }, 3000); // 3-second debounce on rapid local typing
-
-    return () => clearTimeout(timer);
-  }, [pendingSync, projects, tasks, logs, localTimestamp, githubAuth, githubSha, conflictData]);
-
-  // Pull logic
-  const executePull = async (auth: GithubAuth, currentLocalTs: string | null) => {
-    setSyncStatus('syncing');
-    try {
-      const { payload, sha } = await fetchFromGithub(auth);
-      setGithubSha(sha);
-      
-      if (payload) {
-         if (!currentLocalTs) {
-            // First time pairing, adopt cloud completely
-            adoptCloudState(payload);
-         } else {
-            // Check if timestamps diverge entirely
-            if (payload.lastUpdated !== currentLocalTs) {
-               // We have a diff. Present conflict choice to user.
-               setConflictData(payload);
-               setSyncStatus('error'); // Paired with a warning
-            } else {
-               setSyncStatus('synced');
-               setLastSyncTime(new Date().toISOString());
-            }
-         }
-      } else {
-         // Repo is empty, we should push to seed it
-         setSyncStatus('synced');
-         if (currentLocalTs) setPendingSync(true);
-      }
-    } catch (err: any) {
-      if (err.message === 'rate_limit') setSyncStatus('rate_limit');
-      else setSyncStatus('error');
-    }
-  };
-
-  const adoptCloudState = (payload: GithubSyncPayload) => {
-    isRemotePullRef.current = true;
-    setProjects(payload.projects);
-    setTasks(payload.tasks);
-    setLogs(payload.logs);
-    setLocalTimestamp(payload.lastUpdated);
-    setSyncStatus('synced');
-    setLastSyncTime(new Date().toISOString());
-    setTimeout(() => { isRemotePullRef.current = false; }, 500);
-  };
-
-  const handleConflictResolve = (choice: 'cloud' | 'local') => {
-    if (!conflictData) return;
-    if (choice === 'cloud') {
-       adoptCloudState(conflictData);
-    } else {
-       // Keep local, just trigger a push instantly to overwrite cloud
-       markDirty();
-    }
-    setConflictData(null);
-  };
-
-  const markDirty = () => {
-    if (isRemotePullRef.current) return;
-    setLocalTimestamp(new Date().toISOString());
-    setPendingSync(true);
-  };
-
-  const syncNow = () => {
-    if (githubAuth) executePull(githubAuth, localTimestamp);
-  };
-
-  // Mutator definitions
   const logAction = (action: string, projectId: string | null, taskTitle: string, details: string) => {
      let projName = "Unknown Project";
      if (projectId) {
@@ -213,10 +72,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
      };
 
      setLogs(prev => [newLog, ...prev]);
-     markDirty();
   };
 
-  const updateTaskStatus = (taskId: string, newStatus: Task['status']) => {
+  const updateTaskStatus = async (taskId: string, newStatus: string) => {
+    // Optimistic UI Update
     setTasks(prevTasks => {
       const updated = [...prevTasks];
       const index = updated.findIndex(t => t.id === taskId);
@@ -229,10 +88,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updated[index] = { ...updated[index], status: newStatus };
       return updated;
     });
-    markDirty();
+    
+    // Server Mutation
+    await updateTaskStatusAction(taskId, newStatus);
   };
 
-  const updateTask = (taskId: string, updates: Partial<Task>) => {
+  const updateTask = async (taskId: string, updates: any) => {
+    // Optimistic UI Update
     setTasks(prevTasks => {
       const updated = [...prevTasks];
       const index = updated.findIndex(t => t.id === taskId);
@@ -242,17 +104,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updated[index] = { ...updated[index], ...updates };
       return updated;
     });
-    markDirty();
+
+    // Server Mutation
+    await updateTaskAction(taskId, updates);
   };
 
-  const addProject = (p: Omit<Project, 'id' | 'progress'>) => {
-    const project: Project = { ...p, id: `p_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, progress: 0 };
-    setProjects(prev => [...prev, project]);
-    logAction('Create', project.id, 'N/A', `New Project Created: ${project.name}`);
-    markDirty();
+  const addProject = (p: any) => {
+    // Deprecated for generic UI -> Moved entirely to Manager
   };
 
-  const updateProject = (projectId: string, updates: Partial<Project>) => {
+  const updateProject = async (projectId: string, updates: any) => {
     setProjects(prevProjects => {
       const updated = [...prevProjects];
       const index = updated.findIndex(p => p.id === projectId);
@@ -261,26 +122,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
     logAction('Update', projectId, 'N/A', `Project details modified`);
-    markDirty();
+    
+    // Server Mutation
+    await updateProjectAction(projectId, updates);
   };
 
-  const deleteProject = (projectId: string) => {
-    if (confirm("Are you sure you want to delete this project? All associated tasks will be removed.")) {
+  const deleteProject = async (projectId: string) => {
+    if (confirm("Are you sure you want to completely delete this project?")) {
       setProjects(prev => prev.filter(p => p.id !== projectId));
       setTasks(prev => prev.filter(t => t.projectId !== projectId));
       logAction('Delete', projectId, 'N/A', `Project permanently deleted`);
-      markDirty();
+      
+      // Server Mutation
+      await deleteProjectAction(projectId);
     }
   };
 
-  const addTask = (t: Omit<Task, 'id'>) => {
-    const task: Task = { ...t, id: `t_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` };
-    setTasks(prev => [...prev, task]);
-    logAction('Create', task.projectId, task.title, `New Task added directly to ${task.status}`);
-    markDirty();
+  const addTask = async (t: any) => {
+    // Server Mutation First to get ID, or optimistic
+    const res = await createTaskAction(t);
+    if (res?.success) {
+      setTasks(prev => [...prev, res.data]);
+      logAction('Create', t.projectId, t.title, `New Task added directly to ${t.status}`);
+    } else {
+      console.error(res?.error);
+    }
   };
 
-  const deleteTask = (taskId: string) => {
+  const deleteTask = async (taskId: string) => {
     setTasks(prevTasks => {
        const task = prevTasks.find(t => t.id === taskId);
        if (task) {
@@ -288,10 +157,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
        }
        return prevTasks.filter(t => t.id !== taskId);
     });
-    markDirty();
+    
+    // Server Mutation
+    await deleteTaskAction(taskId);
   };
-
-  if (!isHydrated) return null;
 
   return (
     <AppContext.Provider value={{ 
@@ -300,12 +169,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setTasks, updateTaskStatus, updateTask, addProject, updateProject, deleteProject, addTask, deleteTask, logAction 
     }}>
       {children}
-      <ConflictModal 
-        isOpen={!!conflictData} 
-        cloudTimestamp={conflictData?.lastUpdated} 
-        localTimestamp={localTimestamp || undefined} 
-        onResolve={handleConflictResolve} 
-      />
     </AppContext.Provider>
   );
 }
