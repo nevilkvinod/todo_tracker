@@ -10,7 +10,8 @@ import {
   Calendar,
   Settings,
   Activity,
-  LogOut
+  LogOut,
+  Clock
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/utils/cn';
@@ -20,6 +21,7 @@ const navItems = [
   { name: 'Board', href: '/board', icon: KanbanSquare },
   { name: 'Gantt Chart', href: '/timeline', icon: Activity },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
+  { name: 'Attendance', href: '/activity', icon: Clock },
 ];
 
 export function Sidebar() {

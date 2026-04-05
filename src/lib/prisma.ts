@@ -6,6 +6,9 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+// Force clear Prisma cache so the new generated code is picked up by HMR
+delete (globalThis as any).prisma;
+
 const createPrismaClient = () => {
   const connectionString = `${process.env.DATABASE_URL}`;
   const pool = new Pool({ connectionString });

@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, UserCheck } from 'lucide-react';
+
+const EMPTY_ARRAY: any[] = [];
 
 export function UserAutocomplete({ 
   onSelect, 
-  excludeIds = [],
+  excludeIds = EMPTY_ARRAY,
   fetchUsers,
   placeholder = "Search users by name or email..."
 }: { 
@@ -32,7 +34,7 @@ export function UserAutocomplete({
 
   useEffect(() => {
     if (query.trim().length < 2) {
-      setResults([]);
+      setResults(prev => prev.length === 0 ? prev : []);
       setIsOpen(false);
       return;
     }
