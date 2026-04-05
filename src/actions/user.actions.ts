@@ -15,6 +15,46 @@ async function requireManager() {
   return session.user;
 }
 
+const CreateUserSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  role: z.nativeEnum(Role).optional().default('USER'),
+});
+
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+
+export async function createUserAction(data: any) {
+  try {
+    await requireManager();
+    const { name, email, password, role } = CreateUserSchema.parse(data);
+    
+    // Check if exists
+    const existing = await prisma.user.findFirst({ where: { email } });
+    if (existing) {
+      // If soft-deleted, maybe we should restore? We'll just generic error for now
+      throw new Error("User with this email already exists.");
+    }
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email: email.trim().toLowerCase(),
+        password: hashedPassword,
+        role
+      }
+    });
+    
+    revalidatePath('/manager');
+    revalidateTag('users', 'default');
+    return { success: true, data: { id: user.id }, error: null };
+  } catch (error: any) {
+    return { success: false, data: null, error: error.message };
+  }
+}
+
 const RoleSchema = z.object({
   userId: z.string().cuid(),
   role: z.nativeEnum(Role)
