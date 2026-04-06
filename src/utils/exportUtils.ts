@@ -1,4 +1,4 @@
-import { Task, Project } from '@/data/mockData';
+import type { Task, Project } from '@prisma/client';
 import { ActionLog } from '@/context/AppContext';
 
 export function downloadCSV(filename: string, csvContent: string) {
@@ -24,8 +24,8 @@ export function exportTrackerData(projects: Project[], tasks: Task[]) {
     t.status,
     t.priority,
     t.completionPercentage,
-    t.startDate.split('T')[0],
-    t.endDate.split('T')[0]
+    t.startDate ? (t.startDate as Date).toISOString().split('T')[0] : '',
+    t.endDate ? (t.endDate as Date).toISOString().split('T')[0] : ''
   ]);
 
   const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");

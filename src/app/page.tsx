@@ -1,93 +1,25 @@
-"use client";
+import React from "react";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/next-auth";
+import { ProjectService } from "@/services/project.service";
+import { TaskService } from "@/services/task.service";
+import DashboardClient from "@/components/dashboard/DashboardClient";
 
-import React, { useState } from 'react';
-import { useAppContext } from "@/context/AppContext";
-import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
-import { DashboardAnalytics } from "@/components/dashboard/DashboardAnalytics";
-import { GanttChart } from "@/components/timeline/GanttChart";
-import { ProjectsListPanel } from "@/components/dashboard/ProjectsListPanel";
-import { exportTrackerData, exportActivityLogs } from "@/utils/exportUtils";
-import { Button } from "@/components/ui/button";
-import { Download, History, ListTodo } from "lucide-react";
-import { formatDistanceToNow } from 'date-fns';
+export default async function Home() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return null;
 
-export default function Home() {
-  const { projects, tasks, logs } = useAppContext();
+  let projects: any[] = [];
+  let tasks: any[] = [];
+  try {
+    projects = await ProjectService.getProjects(session.user.id, session.user.role as string);
+    const projectIds = projects.map(p => p.id);
+    if (projectIds.length > 0) {
+      tasks = await TaskService.getTasksForProjects(projectIds, session.user.id, session.user.role as string);
+    }
+  } catch (e) {
+    console.error("Dashboard data fetch error:", e);
+  }
 
-  return (
-    <div className="flex-col md:flex h-full overflow-y-auto pb-10">
-      <div className="flex-1 space-y-6 p-8 pt-6">
-        
-        {/* Header Actions */}
-        <div className="flex items-center justify-between space-y-2">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-              Dashboard 
-              <span className="flex items-center gap-1.5 text-xs font-normal px-2 py-1 bg-secondary/50 rounded-full border border-border">
-                <ListTodo className="h-4 w-4 text-primary" /> 
-                Live Context
-              </span>
-            </h2>
-            <p className="text-muted-foreground">Personal Headquarters & Tracker Overview</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" onClick={() => exportActivityLogs(logs)}>
-              <History className="mr-2 h-4 w-4" /> Export Logs
-            </Button>
-            <Button variant="secondary" onClick={() => exportTrackerData(projects, tasks)}>
-              <Download className="mr-2 h-4 w-4" /> Backup CSV
-            </Button>
-          </div>
-        </div>
-        
-        {/* Core Metrics */}
-        <DashboardMetrics />
-        <DashboardAnalytics />
-        
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-12 mt-6">
-          
-          {/* Projects Management Panel */}
-          <div className="col-span-1 lg:col-span-3">
-             <ProjectsListPanel onEditProject={() => {}} />
-          </div>
-
-          {/* Timeline View */}
-          <div className="col-span-1 lg:col-span-6 rounded-xl border border-border bg-card p-6 min-h-[400px]">
-             <GanttChart />
-          </div>
-
-          {/* Activity Log Panel */}
-          <div className="col-span-1 lg:col-span-3 rounded-xl border border-border bg-card flex flex-col overflow-hidden max-h-[600px]">
-             <div className="p-4 border-b border-border bg-secondary/10 flex justify-between items-center">
-                <h3 className="font-semibold flex items-center gap-2"><History size={16} /> Activity Log</h3>
-                <span className="text-xs bg-muted px-2 py-0.5 rounded-full">{logs.length} events</span>
-             </div>
-             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {logs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center mt-10">No recent activity.</p>
-                ) : (
-                  logs.slice(0, 50).map((log, i) => (
-                    <div key={`${log.id}-${i}`} className="flex flex-col gap-1 pb-3 border-b border-border/50 last:border-0 relative pl-4 before:absolute before:left-0 before:top-1.5 before:w-1.5 before:h-1.5 before:bg-primary before:rounded-full">
-                      <div className="flex justify-between items-start gap-2">
-                         <span className="text-xs font-semibold">{log.action}</span>
-                         <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                           {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
-                         </span>
-                      </div>
-                      <div className="text-xs">
-                        <span className="font-medium text-foreground">{log.taskTitle}</span>
-                        <span className="text-muted-foreground mx-1">in</span>
-                        <span className="font-medium text-foreground">{log.projectName}</span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground italic mt-0.5">{log.details}</p>
-                    </div>
-                  ))
-                )}
-             </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  );
+  return <DashboardClient initialProjects={projects} initialTasks={tasks} />;
 }

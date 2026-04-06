@@ -9,10 +9,17 @@ import { Role } from '@prisma/client';
 
 async function requireManager() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== 'MANAGER') {
-    throw new Error("UNAUTHORIZED: Only managers can perform this action.");
+  if (!session?.user?.id) {
+    throw new Error("UNAUTHORIZED: No session found.");
   }
-  return session.user;
+  
+  // Directly verify against DB to prevent stale JWT abuse
+  const dbUser = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!dbUser || dbUser.role !== 'MANAGER') {
+     throw new Error("UNAUTHORIZED: Only managers can perform this action.");
+  }
+  
+  return dbUser;
 }
 
 const CreateUserSchema = z.object({

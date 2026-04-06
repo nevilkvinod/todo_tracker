@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { useAppContext } from '@/context/AppContext';
-import { Task } from '@/data/mockData';
+import { updateTaskAction } from '@/actions/task.actions';
+import type { Task, Project } from '@prisma/client';
 import { format, differenceInDays, differenceInSeconds, addDays, addHours, min, max, isSameDay } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/utils/cn';
@@ -11,8 +11,9 @@ import { cn } from '@/utils/cn';
 const DAY_WIDTH = 48; // px per day
 const ROW_HEIGHT = 48; // px per task row
 
-export function GanttChart() {
-  const { tasks, projects, updateTask } = useAppContext();
+export function GanttChart({ initialProjects, initialTasks }: { initialProjects: Project[], initialTasks: Task[] }) {
+  const [tasks, setTasks] = useState(initialTasks);
+  const projects = initialProjects;
   
   const [zoom, setZoom] = useState<'Day' | 'Week' | 'Month'>('Day');
   
@@ -87,7 +88,19 @@ export function GanttChart() {
     const handlePointerUp = () => {
       if (dragState && tempTasks[dragState.taskId]) {
         const { start, end } = tempTasks[dragState.taskId];
-        updateTask(dragState.taskId, {
+        
+        // Optimistic UI update
+        setTasks(prev => {
+          const clone = [...prev];
+          const idx = clone.findIndex(t => t.id === dragState.taskId);
+          if (idx > -1) {
+            clone[idx] = { ...clone[idx], startDate: start, endDate: end };
+          }
+          return clone;
+        });
+
+        // Server action
+        updateTaskAction(dragState.taskId, {
           startDate: start.toISOString(),
           endDate: end.toISOString()
         });
@@ -104,7 +117,7 @@ export function GanttChart() {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [dragState, tempTasks, currentTickWidth, updateTask]);
+  }, [dragState, tempTasks, currentTickWidth]);
 
   const handlePointerDown = (e: React.PointerEvent, task: Task, type: 'move' | 'resizeLeft' | 'resizeRight') => {
     e.stopPropagation();

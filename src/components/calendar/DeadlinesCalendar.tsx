@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState } from 'react';
-import { format, startOfWeek, addDays, startOfMonth, endOfMonth, endOfWeek, isSameMonth, isSameDay } from 'date-fns';
+import { format, startOfWeek, addDays, startOfMonth, endOfMonth, endOfWeek, isSameMonth, isSameDay, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { useAppContext } from '@/context/AppContext';
 import { cn } from '@/utils/cn';
 import { Badge } from '@/components/ui/badge';
 
-export function DeadlinesCalendar() {
-  const { tasks } = useAppContext();
+import type { Task } from '@prisma/client';
+
+export function DeadlinesCalendar({ initialTasks }: { initialTasks: Task[] }) {
+  const [tasks] = useState<Task[]>(initialTasks);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const monthStart = startOfMonth(currentDate);
@@ -24,9 +26,14 @@ export function DeadlinesCalendar() {
   while (day <= endDate) {
     for (let i = 0; i < 7; i++) {
       formattedDate = format(day, dateFormat);
-      const cloneDay = day;
+      const cloneDay = startOfDay(day);
       
-      const dayTasks = tasks.filter(t => t.endDate ? isSameDay(new Date(t.endDate), cloneDay) : false);
+      const dayTasks = tasks.filter(t => {
+        if (!t.endDate) return false;
+        const taskStart = t.startDate ? startOfDay(new Date(t.startDate)) : startOfDay(new Date(t.endDate));
+        const taskEnd = endOfDay(new Date(t.endDate));
+        return cloneDay >= taskStart && cloneDay <= taskEnd;
+      });
       const criticalTasks = dayTasks.filter(t => t.priority === 'Critical');
 
       days.push(

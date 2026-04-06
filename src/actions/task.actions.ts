@@ -56,9 +56,7 @@ export async function createTaskAction(data: any) {
     console.log(`Task Data: `, parsedData);
 
     const task = await TaskService.createTask(parsedData, user.id, user.role as string);
-    revalidatePath("/board");
-    revalidatePath("/timeline");
-    revalidateTag("board-tasks", "default");
+    revalidatePath("/", "layout");
     return { success: true, data: task, error: null };
   } catch (error: any) {
     console.error("[DB Error] Task Create Failed:", error);
@@ -81,9 +79,7 @@ export async function updateTaskAction(id: string, data: any) {
     }
 
     const task = await TaskService.updateTask(id, parsedData, user.id, user.role as string);
-    revalidatePath("/board");
-    revalidatePath("/timeline");
-    revalidateTag("board-tasks", "default");
+    revalidatePath("/", "layout");
     return { success: true, data: task, error: null };
   } catch (error: any) {
     console.error("[DB Error] Task Update Failed:", error);
@@ -96,9 +92,7 @@ export async function updateTaskStatusAction(id: string, status: string) {
     const user = await requireAuth();
     console.log(`[DB Action] Updating Task Status ${id} to ${status} by ${user.id}`);
     const task = await TaskService.updateStatus(id, status, user.id, user.role as string);
-    revalidatePath("/board");
-    revalidatePath("/timeline");
-    revalidateTag("board-tasks", "default");
+    revalidatePath("/", "layout");
     return { success: true, data: task, error: null };
   } catch (error: any) {
     console.error("[DB Error] Task Status Update Failed:", error);
@@ -111,9 +105,7 @@ export async function deleteTaskAction(id: string) {
     const user = await requireAuth();
     console.log(`[DB Action] Deleting Task ${id} by ${user.id}`);
     const task = await TaskService.deleteTask(id, user.id, user.role as string);
-    revalidatePath("/board");
-    revalidatePath("/timeline");
-    revalidateTag("board-tasks", "default");
+    revalidatePath("/", "layout");
     return { success: true, data: task, error: null };
   } catch (error: any) {
     console.error("[DB Error] Task Delete Failed:", error);

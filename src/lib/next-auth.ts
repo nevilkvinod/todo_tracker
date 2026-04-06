@@ -51,10 +51,24 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+      }
+      
+      if (trigger === "update") {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true }
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+          }
+        } catch (e) {
+          console.error("JWT role fetch error", e);
+        }
       }
       return token;
     },

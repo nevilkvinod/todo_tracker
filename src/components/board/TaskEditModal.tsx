@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Task, Project } from '@/data/mockData';
+import type { Task, Project } from '@prisma/client';
 import { addDays } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,8 +25,8 @@ export function TaskEditModal({ task, projects, isOpen, onClose, onSave, onDelet
       setTitle(task.title);
       setPriority(task.priority);
       setProgress(task.completionPercentage);
-      setStartDate(task.startDate ? task.startDate.split('T')[0] : new Date().toISOString().split('T')[0]);
-      setEndDate(task.endDate ? task.endDate.split('T')[0] : addDays(new Date(), 7).toISOString().split('T')[0]);
+      setStartDate(task.startDate ? (task.startDate as Date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+      setEndDate(task.endDate ? (task.endDate as Date).toISOString().split('T')[0] : addDays(new Date(), 7).toISOString().split('T')[0]);
     }
   }, [task]);
 
@@ -37,9 +37,9 @@ export function TaskEditModal({ task, projects, isOpen, onClose, onSave, onDelet
       title,
       priority,
       completionPercentage: progress,
-      startDate: new Date(startDate).toISOString(),
-      endDate: new Date(endDate).toISOString(),
-    });
+      startDate: startDate ? new Date(startDate) : null,
+      endDate: endDate ? new Date(endDate) : null,
+    } as Partial<Task>);
     onClose();
   };
 

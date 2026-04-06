@@ -1,0 +1,1 @@
+﻿src/components/dashboard/DashboardClient.tsx(34,12): error TS2739: Type '{}' is missing the following properties from type '{ initialProjects: { name: string; id: string; description: string | null; color: string; status: ProjectStatus; deletedAt: Date | null; createdAt: Date; updatedAt: Date; }[]; initialTasks: { ...; }[]; }': initialProjects, initialTasks
