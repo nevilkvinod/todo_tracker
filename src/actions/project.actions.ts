@@ -1,7 +1,7 @@
 'use server';
 
 import { ProjectService } from '../services/project.service';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/next-auth';
 import { z } from 'zod';
@@ -43,8 +43,7 @@ export async function createProjectAction(data: any) {
     const project = await ProjectService.createProject(parsedData, user.id, user.role as string);
     console.log("Created project:", project);
     
-    revalidateTag('projects');
-    revalidateTag('dashboard');
+    revalidatePath('/', 'layout');
     return { success: true, data: project, error: null };
   } catch (error: any) {
     console.error("[DB Error] Project Create Failed:", error);
@@ -62,8 +61,7 @@ export async function updateProjectAction(id: string, data: any) {
     const project = await ProjectService.updateProject(id, parsedData, user.id, user.role as string);
     console.log("Updated project:", project);
     
-    revalidateTag('projects');
-    revalidateTag('dashboard');
+    revalidatePath('/', 'layout');
     return { success: true, data: project, error: null };
   } catch (error: any) {
     console.error("[DB Error] Project Update Failed:", error);
@@ -77,8 +75,7 @@ export async function deleteProjectAction(id: string) {
     console.log(`[DB Action] Deleting project ${id} By ${user.id} - ${user.role}`);
     const project = await ProjectService.deleteProject(id, user.id, user.role as string);
     
-    revalidateTag('projects');
-    revalidateTag('dashboard');
+    revalidatePath('/', 'layout');
     return { success: true, data: project, error: null };
   } catch (error: any) {
     console.error("[DB Error] Project Delete Failed:", error);
@@ -99,8 +96,7 @@ export async function assignProjectAction(data: any) {
     console.log(`[DB Action] Assigning user ${assigneeId} to project ${projectId} by ${user.id}`);
     await ProjectService.assignUser(projectId, assigneeId, user as any);
     
-    revalidateTag('projects');
-    revalidateTag('dashboard');
+    revalidatePath('/', 'layout');
     return { success: true, data: null, error: null };
   } catch (error: any) {
     console.error("[DB Error] Assignment Failed:", error.message);
@@ -116,8 +112,7 @@ export async function removeUserFromProjectAction(data: any) {
     console.log(`[DB Action] Removing user ${assigneeId} from project ${projectId} by ${user.id}`);
     await ProjectService.removeUser(projectId, assigneeId, user as any);
     
-    revalidateTag('projects');
-    revalidateTag('dashboard');
+    revalidatePath('/', 'layout');
     return { success: true, data: null, error: null };
   } catch (error: any) {
     console.error("[DB Error] Removal Failed:", error.message);
