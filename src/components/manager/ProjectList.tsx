@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { createProjectAction } from '@/actions/project.actions';
+import { createProjectAction, updateProjectAction, deleteProjectAction } from '@/actions/project.actions';
 import { ProjectCreateModal } from '@/components/board/ProjectCreateModal';
 
 export function ProjectList({ projects }: { projects: any[] }) {
@@ -32,6 +32,27 @@ export function ProjectList({ projects }: { projects: any[] }) {
   const openEditor = (project: any) => {
     setProjectToEdit(project);
     setIsModalOpen(true);
+  };
+
+  const handleEditSave = async (id: string, updates: any) => {
+    setErrorMsg('');
+    const res = await updateProjectAction(id, updates);
+    if (!res.success) {
+      setErrorMsg(res.error || 'Failed to update project');
+    } else {
+      setIsModalOpen(false);
+      setProjectToEdit(null);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to completely delete this project?")) {
+      setErrorMsg('');
+      const res = await deleteProjectAction(id);
+      if (!res.success) {
+        setErrorMsg(res.error || 'Failed to delete project');
+      }
+    }
   };
 
   return (
@@ -105,12 +126,20 @@ export function ProjectList({ projects }: { projects: any[] }) {
                   <p className="text-xs text-muted-foreground">{project.status}</p>
                 </div>
               </div>
-              <button
-                onClick={() => openEditor(project)}
-                className="px-3 py-1 text-xs bg-secondary hover:bg-primary hover:text-primary-foreground border border-border rounded transition-colors opacity-0 group-hover:opacity-100"
-              >
-                Edit
-              </button>
+              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => openEditor(project)}
+                  className="px-3 py-1 text-xs bg-secondary hover:bg-primary hover:text-primary-foreground border border-border rounded transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(project.id)}
+                  className="px-3 py-1 text-xs bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 rounded transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -121,6 +150,7 @@ export function ProjectList({ projects }: { projects: any[] }) {
         editProject={projectToEdit}
         onClose={() => { setIsModalOpen(false); setProjectToEdit(null); }}
         onSave={() => {}} // Create happens inline here now
+        onEditSave={handleEditSave}
       />
     </div>
   );

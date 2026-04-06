@@ -73,12 +73,10 @@ export default function DashboardClient({ initialProjects, initialTasks }: { ini
             </div>
 
           </motion.div>
-
-          {/* Additional bottom row if needed */}
+          
           <motion.div variants={itemVariants} className="mt-6">
-             <ProjectsListPanel initialProjects={initialProjects} onEditProject={() => {}} />
+             <ProjectsListPanel initialProjects={initialProjects} />
           </motion.div>
-
         </motion.div>
       </div>
     </div>

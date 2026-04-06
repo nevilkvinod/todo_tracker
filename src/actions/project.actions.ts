@@ -1,14 +1,17 @@
 'use server';
 
 import { ProjectService } from '../services/project.service';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/next-auth';
 import { z } from 'zod';
 
-async function requireAuth() {
+async function requireManager() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) throw new Error("Unauthorized");
+  if (session.user.role !== "MANAGER") {
+    throw new Error("Unauthorized: Only MANAGER can perform this action");
+  }
   return session.user;
 }
 
@@ -21,8 +24,9 @@ const ProjectSchema = z.object({
 
 export async function fetchProjectsAction() {
   try {
-    const user = await requireAuth();
-    const projects = await ProjectService.getProjects(user.id, user.role as string);
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    const projects = await ProjectService.getProjects(session.user.id, session.user.role as string);
     return { success: true, data: projects, error: null };
   } catch (error: any) {
     return { success: false, data: null, error: error.message };
@@ -31,12 +35,16 @@ export async function fetchProjectsAction() {
 
 export async function createProjectAction(data: any) {
   try {
-    const user = await requireAuth();
+    const user = await requireManager();
     const parsedData = ProjectSchema.parse(data);
     console.log(`[DB Action] Creating project By ${user.id} - ${user.role}`);
     console.log(`Data: `, parsedData);
+    
     const project = await ProjectService.createProject(parsedData, user.id, user.role as string);
-    revalidatePath('/', 'layout');
+    console.log("Created project:", project);
+    
+    revalidateTag('projects');
+    revalidateTag('dashboard');
     return { success: true, data: project, error: null };
   } catch (error: any) {
     console.error("[DB Error] Project Create Failed:", error);
@@ -46,12 +54,16 @@ export async function createProjectAction(data: any) {
 
 export async function updateProjectAction(id: string, data: any) {
   try {
-    const user = await requireAuth();
+    const user = await requireManager();
     const parsedData = ProjectSchema.partial().parse(data);
     console.log(`[DB Action] Updating project ${id} By ${user.id} - ${user.role}`);
     console.log(`Update Data: `, parsedData);
+    
     const project = await ProjectService.updateProject(id, parsedData, user.id, user.role as string);
-    revalidatePath('/', 'layout');
+    console.log("Updated project:", project);
+    
+    revalidateTag('projects');
+    revalidateTag('dashboard');
     return { success: true, data: project, error: null };
   } catch (error: any) {
     console.error("[DB Error] Project Update Failed:", error);
@@ -61,10 +73,12 @@ export async function updateProjectAction(id: string, data: any) {
 
 export async function deleteProjectAction(id: string) {
   try {
-    const user = await requireAuth();
+    const user = await requireManager();
     console.log(`[DB Action] Deleting project ${id} By ${user.id} - ${user.role}`);
     const project = await ProjectService.deleteProject(id, user.id, user.role as string);
-    revalidatePath('/', 'layout');
+    
+    revalidateTag('projects');
+    revalidateTag('dashboard');
     return { success: true, data: project, error: null };
   } catch (error: any) {
     console.error("[DB Error] Project Delete Failed:", error);
@@ -79,13 +93,14 @@ const AssignSchema = z.object({
 
 export async function assignProjectAction(data: any) {
   try {
-    const user = await requireAuth();
+    const user = await requireManager();
     const { projectId, assigneeId } = AssignSchema.parse(data);
     
     console.log(`[DB Action] Assigning user ${assigneeId} to project ${projectId} by ${user.id}`);
     await ProjectService.assignUser(projectId, assigneeId, user as any);
     
-    revalidatePath('/', 'layout');
+    revalidateTag('projects');
+    revalidateTag('dashboard');
     return { success: true, data: null, error: null };
   } catch (error: any) {
     console.error("[DB Error] Assignment Failed:", error.message);
@@ -95,13 +110,14 @@ export async function assignProjectAction(data: any) {
 
 export async function removeUserFromProjectAction(data: any) {
   try {
-    const user = await requireAuth();
+    const user = await requireManager();
     const { projectId, assigneeId } = AssignSchema.parse(data);
     
     console.log(`[DB Action] Removing user ${assigneeId} from project ${projectId} by ${user.id}`);
     await ProjectService.removeUser(projectId, assigneeId, user as any);
     
-    revalidatePath('/', 'layout');
+    revalidateTag('projects');
+    revalidateTag('dashboard');
     return { success: true, data: null, error: null };
   } catch (error: any) {
     console.error("[DB Error] Removal Failed:", error.message);

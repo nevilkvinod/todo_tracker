@@ -23,14 +23,19 @@ export class ActivityService {
   static async checkIn(userId: string) {
     if (!userId) throw new Error("Validation Error: User.id is missing or null");
 
-    const active = await ActivityService.getActiveSession(userId);
-    if (active) throw new Error("Already clocked in. Cannot double-dip shifts.");
+    return prisma.$transaction(async (tx) => {
+      const active = await tx.loginActivity.findFirst({
+        where: { userId, logoutAt: null },
+        orderBy: { loginAt: 'desc' },
+      });
+      if (active) throw new Error("Already clocked in. Cannot double-dip shifts.");
 
-    return await prisma.loginActivity.create({
-      data: {
-        userId,
-        loginAt: new Date()
-      }
+      return tx.loginActivity.create({
+        data: {
+          userId,
+          loginAt: new Date()
+        }
+      });
     });
   }
 
@@ -40,20 +45,25 @@ export class ActivityService {
   static async checkOut(userId: string) {
     if (!userId) throw new Error("Validation Error: User.id is missing or null");
 
-    const activity = await ActivityService.getActiveSession(userId);
+    return prisma.$transaction(async (tx) => {
+      const activity = await tx.loginActivity.findFirst({
+        where: { userId, logoutAt: null },
+        orderBy: { loginAt: 'desc' },
+      });
 
-    if (!activity) throw new Error("No active session found to clock out of.");
+      if (!activity) throw new Error("No active session found to clock out of.");
 
-    const logoutAt = new Date();
-    const durationMs = logoutAt.getTime() - activity.loginAt.getTime();
-    const durationSeconds = Math.floor(durationMs / 1000);
+      const logoutAt = new Date();
+      const durationMs = logoutAt.getTime() - activity.loginAt.getTime();
+      const durationSeconds = Math.floor(durationMs / 1000);
 
-    return await prisma.loginActivity.update({
-      where: { id: activity.id },
-      data: {
-        logoutAt,
-        duration: durationSeconds,
-      }
+      return tx.loginActivity.update({
+        where: { id: activity.id },
+        data: {
+          logoutAt,
+          duration: durationSeconds,
+        }
+      });
     });
   }
 

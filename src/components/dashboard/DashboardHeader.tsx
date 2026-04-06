@@ -38,6 +38,9 @@ export function DashboardHeader({ initialProjects, initialTasks }: { initialProj
             <Activity className="h-3.5 w-3.5 animate-pulse" /> 
             Live
           </span>
+          <span className="flex items-center gap-1.5 text-xs font-normal px-2.5 py-1 bg-primary/10 text-primary rounded-full border border-primary/20">
+            Managed by Admin
+          </span>
         </h2>
         <p className="text-muted-foreground mt-1 text-sm">Personal Headquarters & Tracker Overview</p>
       </div>
