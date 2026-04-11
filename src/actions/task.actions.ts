@@ -38,6 +38,30 @@ export async function fetchTasksAction(projectId: string) {
   }
 }
 
+export async function fetchBoardTasksAction() {
+  try {
+    const user = await requireAuth();
+    const projects = await ProjectRepository.findAllUserProjects(user.id, user.role as string);
+    const projectIds = projects.map((p: any) => p.id);
+    if(projectIds.length === 0) return { success: true, data: [], error: null };
+    const tasks = await TaskService.getTasksForProjects(projectIds, user.id, user.role as string);
+    return { success: true, data: tasks, error: null };
+  } catch (error: any) {
+    return { success: false, data: null, error: error.message };
+  }
+}
+
+export async function fetchTaskDetailsAction(taskId: string) {
+  try {
+    const user = await requireAuth();
+    // Use TaskRepository to get full includes (subtasks, comments, history)
+    const task = await TaskService.getTaskDetails(taskId, user.id, user.role as string);
+    return { success: true, data: task, error: null };
+  } catch (error: any) {
+    return { success: false, data: null, error: error.message };
+  }
+}
+
 import { ProjectRepository } from "@/repositories/project.repository";
 
 export async function createTaskAction(data: any) {
@@ -109,6 +133,49 @@ export async function deleteTaskAction(id: string) {
     return { success: true, data: task, error: null };
   } catch (error: any) {
     console.error("[DB Error] Task Delete Failed:", error);
+    return { success: false, data: null, error: error.message };
+  }
+}
+
+import { prisma } from "@/lib/prisma";
+
+export async function addCommentAction(taskId: string, content: string) {
+  try {
+    const user = await requireAuth();
+    const comment = await prisma.comment.create({
+      data: { taskId, userId: user.id, content },
+      include: { user: { select: { name: true, image: true } } }
+    });
+    return { success: true, data: comment, error: null };
+  } catch (error: any) {
+    return { success: false, data: null, error: error.message };
+  }
+}
+
+export async function addSubtaskAction(taskId: string, title: string) {
+  try {
+    const user = await requireAuth();
+    const subtask = await prisma.subtask.create({
+      data: { taskId, title }
+    });
+    await prisma.taskHistory.create({
+       data: { field: 'subtask', newValue: `Added: ${title}`, userId: user.id, taskId }
+    });
+    return { success: true, data: subtask, error: null };
+  } catch (error: any) {
+    return { success: false, data: null, error: error.message };
+  }
+}
+
+export async function toggleSubtaskAction(subtaskId: string, isCompleted: boolean) {
+  try {
+    const user = await requireAuth();
+    const subtask = await prisma.subtask.update({
+      where: { id: subtaskId },
+      data: { isCompleted }
+    });
+    return { success: true, data: subtask, error: null };
+  } catch (error: any) {
     return { success: false, data: null, error: error.message };
   }
 }

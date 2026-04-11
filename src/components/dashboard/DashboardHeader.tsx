@@ -7,13 +7,17 @@ import { useAppContext } from '@/context/AppContext';
 
 import type { Project, Task } from '@prisma/client';
 
+import { useTasks } from '@/hooks/useTasks';
+
 export function DashboardHeader({ initialProjects, initialTasks }: { initialProjects: Project[], initialTasks: Task[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { logs } = useAppContext();
   
+  const { data } = useTasks('All');
+  const tasks = data || initialTasks;
+  
   const projects = initialProjects;
-  const tasks = initialTasks;
 
   const currentStatus = searchParams.get('status') || 'all';
   const currentProject = searchParams.get('projectId') || 'all';

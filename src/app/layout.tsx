@@ -21,6 +21,8 @@ export const metadata: Metadata = {
   description: "High-performance project management web application.",
 };
 
+import { QueryProvider } from "@/context/QueryProvider";
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -32,12 +34,14 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground flex h-screen overflow-hidden`}
       >
         <AuthProvider>
-          <AppProvider>
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto">
-              {children}
-            </main>
-          </AppProvider>
+          <QueryProvider>
+            <AppProvider>
+              <Sidebar />
+              <main className="flex-1 overflow-y-auto">
+                {children}
+              </main>
+            </AppProvider>
+          </QueryProvider>
         </AuthProvider>
       </body>
     </html>

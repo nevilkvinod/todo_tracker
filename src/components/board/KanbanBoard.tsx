@@ -4,10 +4,12 @@ import React, { useState, useMemo } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import type { Task, Project } from '@prisma/client';
 import { TaskStatus } from '@prisma/client';
-import { TaskEditModal } from './TaskEditModal';
+import { TaskDetailPanel } from './TaskDetailPanel';
 import { TaskCreateModal } from './TaskCreateModal';
 import { Badge } from '@/components/ui/badge';
-import { updateTaskStatusAction, updateTaskAction, createTaskAction, deleteTaskAction } from '@/actions/task.actions';
+import { createTaskAction, deleteTaskAction } from '@/actions/task.actions';
+import { useTasks, useMutateTask } from '@/hooks/useTasks';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
@@ -151,21 +153,21 @@ function Column({ id, status, tasks, projects, onOpenEdit, onOpenCreate }: { id:
 
 export function KanbanBoard({ initialProjects, initialTasks }: { initialProjects: Project[], initialTasks: Task[] }) {
   const { logAction } = useAppContext();
+  const queryClient = useQueryClient();
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('All');
   
-  const [tasks, setTasks] = useState(initialTasks);
+  const { data: serverTasks } = useTasks(selectedProjectId);
+  const tasks = serverTasks || initialTasks;
   const projects = initialProjects;
 
-  // Sync when server data changes
-  React.useEffect(() => {
-    setTasks(initialTasks);
-  }, [initialTasks]);
-  
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('All');
+  const { updateStatusMutation, createTaskMutation } = useMutateTask();
+
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   
   // Edit Modal State
   const [isEditModalOpen, setEditModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const editingTask = useMemo(() => tasks.find(t => t.id === editingTaskId) || null, [tasks, editingTaskId]);
 
   // Create Modal State
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
@@ -222,32 +224,27 @@ export function KanbanBoard({ initialProjects, initialTasks }: { initialProjects
 
     if (isActiveTask) {
       if (isOverColumn) {
-        // Optimistic update locally
-        setTasks(prev => {
-          const updated = [...prev];
-          const idx = updated.findIndex(t => t.id === activeId);
-          if (idx > -1) updated[idx] = { ...updated[idx], status: overId as TaskStatus };
-          return updated;
+        // Optimistic update
+        queryClient.setQueryData(['tasks', selectedProjectId], (old: Task[] | undefined) => {
+          if (!old) return old;
+          return old.map(t => t.id === activeId ? { ...t, status: overId } : t);
         });
-        handleUpdateTaskStatus(activeId, overId as TaskStatus);
+        updateStatusMutation.mutate({ id: activeId, status: overId });
       } else if (isOverTask) {
-        // Find column of the task we hovered over
         const overTask = tasks.find(t => t.id === overId);
         if (overTask && active.data.current?.task.status !== overTask.status) {
-           setTasks(prev => {
-            const updated = [...prev];
-            const idx = updated.findIndex(t => t.id === activeId);
-            if (idx > -1) updated[idx] = { ...updated[idx], status: overTask.status };
-            return updated;
-          });
-          handleUpdateTaskStatus(activeId, overTask.status);
+           queryClient.setQueryData(['tasks', selectedProjectId], (old: Task[] | undefined) => {
+             if (!old) return old;
+             return old.map(t => t.id === activeId ? { ...t, status: overTask.status } : t);
+           });
+           updateStatusMutation.mutate({ id: activeId, status: overTask.status });
         }
       }
     }
   };
 
   const openEditModal = (task: Task) => {
-    setEditingTask(task);
+    setEditingTaskId(task.id);
     setEditModalOpen(true);
   };
 
@@ -256,42 +253,11 @@ export function KanbanBoard({ initialProjects, initialTasks }: { initialProjects
     setCreateModalOpen(true);
   };
 
-  const handleUpdateTaskStatus = async (taskId: string, newStatus: TaskStatus) => {
-    const res = await updateTaskStatusAction(taskId, newStatus);
-    if (!res.success) {
-      alert(res.error || "Failed to update status");
-      // Rollback optimist update
-      setTasks([...initialTasks]);
-    }
-  };
-
-  const handleUpdateTask = async (taskId: string, updates: any) => {
-    setTasks(prev => {
-      const clone = [...prev];
-      const index = clone.findIndex(t => t.id === taskId);
-      if (index > -1) clone[index] = { ...clone[index], ...updates };
-      return clone;
+  const handleAddTask = (t: any) => {
+    createTaskMutation.mutate(t, {
+      onSuccess: () => setCreateModalOpen(false),
+      onError: (err) => alert(err.message)
     });
-    const res = await updateTaskAction(taskId, updates);
-    if (!res.success) alert(res.error || "Failed to update task");
-  };
-
-  const handleAddTask = async (t: any) => {
-    const res = await createTaskAction(t);
-    if (res.success && res.data) {
-      setTasks(prev => [...prev, res.data]);
-    } else {
-      alert(res.error || "Failed to create task");
-    }
-  };
-
-  const handleDeleteTask = async (taskId: string) => {
-    const res = await deleteTaskAction(taskId);
-    if (res.success) {
-      setTasks(prev => prev.filter(t => t.id !== taskId));
-    } else {
-      alert(res.error || "Failed to delete task");
-    }
   };
 
   return (
@@ -375,13 +341,11 @@ export function KanbanBoard({ initialProjects, initialTasks }: { initialProjects
         </DragOverlay>
       </DndContext>
 
-      <TaskEditModal 
-        task={editingTask} 
+      <TaskDetailPanel 
+        task={editingTask as any} 
         projects={projects}
         isOpen={isEditModalOpen} 
         onClose={() => setEditModalOpen(false)} 
-        onSave={handleUpdateTask} 
-        onDelete={handleDeleteTask}
       />
 
       <TaskCreateModal

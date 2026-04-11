@@ -8,8 +8,11 @@ import { Badge } from '@/components/ui/badge';
 
 import type { Task } from '@prisma/client';
 
+import { useTasks } from '@/hooks/useTasks';
+
 export function DeadlinesCalendar({ initialTasks }: { initialTasks: Task[] }) {
-  const [tasks] = useState<Task[]>(initialTasks);
+  const { data } = useTasks('All');
+  const tasks = data || initialTasks;
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const monthStart = startOfMonth(currentDate);

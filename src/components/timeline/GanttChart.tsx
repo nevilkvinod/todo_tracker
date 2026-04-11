@@ -6,13 +6,18 @@ import type { Task, Project } from '@prisma/client';
 import { format, differenceInDays, differenceInSeconds, addDays, addHours, min, max, isSameDay } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/utils/cn';
+import { useMutateTask, useTasks } from '@/hooks/useTasks';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Configuration
 const DAY_WIDTH = 48; // px per day
 const ROW_HEIGHT = 48; // px per task row
 
 export function GanttChart({ initialProjects, initialTasks }: { initialProjects: Project[], initialTasks: Task[] }) {
-  const [tasks, setTasks] = useState(initialTasks);
+  const queryClient = useQueryClient();
+  const { data } = useTasks('All');
+  const tasks = data || initialTasks;
+  const { updateTaskMutation } = useMutateTask();
   const projects = initialProjects;
   
   const [zoom, setZoom] = useState<'Day' | 'Week' | 'Month'>('Day');
@@ -88,21 +93,16 @@ export function GanttChart({ initialProjects, initialTasks }: { initialProjects:
     const handlePointerUp = () => {
       if (dragState && tempTasks[dragState.taskId]) {
         const { start, end } = tempTasks[dragState.taskId];
+        const updates = { startDate: start.toISOString(), endDate: end.toISOString() };
         
         // Optimistic UI update
-        setTasks(prev => {
-          const clone = [...prev];
-          const idx = clone.findIndex(t => t.id === dragState.taskId);
-          if (idx > -1) {
-            clone[idx] = { ...clone[idx], startDate: start, endDate: end };
-          }
-          return clone;
+        queryClient.setQueryData(['tasks', 'All'], (old: Task[] | undefined) => {
+          if (!old) return old;
+          return old.map(t => t.id === dragState.taskId ? { ...t, ...updates } : t);
         });
 
-        // Server action
-        updateTaskAction(dragState.taskId, {
-          startDate: start.toISOString(),
-          endDate: end.toISOString()
+        updateTaskMutation.mutate({ id: dragState.taskId, updates }, {
+           onError: (err) => alert(err.message)
         });
       }
       setDragState(null);

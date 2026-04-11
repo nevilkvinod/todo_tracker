@@ -6,8 +6,11 @@ export class TaskRepository {
     return prisma.task.findUnique({
       where: { id },
       include: {
-        project: { select: { color: true } },
-        assignee: { select: { name: true, image: true, email: true } }
+        project: { select: { color: true, name: true } },
+        assignee: { select: { name: true, image: true, email: true } },
+        subtasks: { orderBy: { order: 'asc' } },
+        comments: { orderBy: { createdAt: 'asc' }, include: { user: { select: { name: true, image: true } } } },
+        history: { orderBy: { createdAt: 'desc' }, include: { user: { select: { name: true, image: true } } } }
       }
     });
   }
@@ -21,7 +24,8 @@ export class TaskRepository {
       orderBy: { order: 'asc' },
       include: {
         project: { select: { color: true, name: true } },
-        assignee: { select: { name: true, image: true, email: true } }
+        assignee: { select: { name: true, image: true, email: true } },
+        subtasks: { orderBy: { order: 'asc' } }
       }
     });
   }
@@ -34,8 +38,9 @@ export class TaskRepository {
       },
       orderBy: { order: 'asc' },
       include: { 
-        project: { select: { color: true } },
-        assignee: { select: { name: true, image: true, email: true } }
+        project: { select: { color: true, name: true } },
+        assignee: { select: { name: true, image: true, email: true } },
+        subtasks: { orderBy: { order: 'asc' } }
       }
     });
   }
@@ -44,7 +49,8 @@ export class TaskRepository {
     return prisma.task.create({ 
       data,
       include: {
-        assignee: { select: { name: true, image: true, email: true } }
+        assignee: { select: { name: true, image: true, email: true } },
+        subtasks: { orderBy: { order: 'asc' } }
       }
     });
   }
@@ -54,7 +60,10 @@ export class TaskRepository {
       where: { id }, 
       data,
       include: {
-        assignee: { select: { name: true, image: true, email: true } }
+        assignee: { select: { name: true, image: true, email: true } },
+        subtasks: { orderBy: { order: 'asc' } },
+        comments: { orderBy: { createdAt: 'asc' }, include: { user: { select: { name: true, image: true } } } },
+        history: { orderBy: { createdAt: 'desc' }, include: { user: { select: { name: true, image: true } } } }
       }
     });
   }
