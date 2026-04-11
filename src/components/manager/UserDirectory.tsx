@@ -58,10 +58,11 @@ export function UserDirectory({ users, projects }: { users: any[], projects: any
           + Add New User
         </button>
       ) : (
-        <form onSubmit={handleCreateUser} className="p-4 bg-secondary/30 rounded-lg space-y-4 border border-border">
+        <form onSubmit={handleCreateUser} autoComplete="off" className="p-4 bg-secondary/30 rounded-lg space-y-4 border border-border">
           <div>
             <label className="block text-sm font-medium mb-1">Name</label>
             <input 
+              autoComplete="off" data-lpignore="true"
               autoFocus required value={newUserName} onChange={e => setNewUserName(e.target.value)}
               className="w-full bg-background border border-border rounded p-2 text-sm" placeholder="e.g. Jane Doe"
             />
@@ -69,6 +70,7 @@ export function UserDirectory({ users, projects }: { users: any[], projects: any
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
             <input 
+              autoComplete="off" data-lpignore="true" name="new-user-email-prevent-autofill"
               type="email" required value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)}
               className="w-full bg-background border border-border rounded p-2 text-sm" placeholder="jane@example.com"
             />
@@ -76,6 +78,7 @@ export function UserDirectory({ users, projects }: { users: any[], projects: any
           <div>
             <label className="block text-sm font-medium mb-1">Password</label>
             <input 
+              autoComplete="new-password" data-lpignore="true" name="new-user-password-prevent-autofill"
               type="password" required minLength={6} value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)}
               className="w-full bg-background border border-border rounded p-2 text-sm" placeholder="At least 6 characters"
             />
