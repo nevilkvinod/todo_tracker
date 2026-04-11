@@ -34,29 +34,88 @@ import bcrypt from 'bcryptjs';
 
 export async function createUserAction(data: any) {
   try {
-    await requireManager();
+    const currentUser = await requireManager();
     const { name, email, password, role } = CreateUserSchema.parse(data);
-    
-    // Check if exists
-    const existing = await prisma.user.findFirst({ where: { email } });
-    if (existing) {
-      // If soft-deleted, maybe we should restore? We'll just generic error for now
-      throw new Error("User with this email already exists.");
-    }
-    
+    const normalizedEmail = email.trim().toLowerCase();
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email: email.trim().toLowerCase(),
-        password: hashedPassword,
-        role
+    
+    // Process inside a transaction to prevent race conditions
+    const finalUserId = await prisma.$transaction(async (tx) => {
+      // a. Check if an active user exists by email FIRST
+      const activeUser = await tx.user.findFirst({ 
+        where: { email: normalizedEmail, deletedAt: null } 
+      });
+      
+      if (activeUser) {
+        throw new Error("User with this email already exists.");
       }
+      
+      // b. Check if a soft-deleted user exists by email
+      const softDeletedUser = await tx.user.findFirst({
+        where: { email: normalizedEmail, deletedAt: { not: null } },
+        orderBy: { deletedAt: 'desc' }
+      });
+      
+      if (softDeletedUser) {
+        // c. RESTORE user
+        const restoredUser = await tx.user.update({
+          where: { id: softDeletedUser.id },
+          data: {
+            name,
+            password: hashedPassword,
+            role,
+            deletedAt: null
+          }
+        });
+        
+        // Clear or detach old relations (tasks/projects/assignments) to prevent data leakage
+        await tx.userProject.deleteMany({ where: { userId: softDeletedUser.id } });
+        await tx.task.updateMany({ 
+          where: { assigneeId: softDeletedUser.id }, 
+          data: { assigneeId: null } 
+        });
+        
+        // Log restoration explicitly
+        await tx.auditLog.create({
+          data: {
+            action: 'RESTORE_USER',
+            userId: currentUser.id,
+            targetId: restoredUser.id,
+            targetEmail: normalizedEmail,
+            metadata: { message: "User account restored overriding soft delete" }
+          }
+        });
+        
+        return restoredUser.id;
+      }
+      
+      // d. If not exists -> create new user normally
+      const newUser = await tx.user.create({
+        data: {
+          name,
+          email: normalizedEmail,
+          password: hashedPassword,
+          role
+        }
+      });
+      
+      // Log creation
+      await tx.auditLog.create({
+        data: {
+          action: 'CREATE_USER',
+          userId: currentUser.id,
+          targetId: newUser.id,
+          targetEmail: normalizedEmail,
+          metadata: { message: "New user created" }
+        }
+      });
+      
+      return newUser.id;
     });
     
     revalidatePath('/manager');
     revalidateTag('users', 'default');
-    return { success: true, data: { id: user.id }, error: null };
+    return { success: true, data: { id: finalUserId }, error: null };
   } catch (error: any) {
     return { success: false, data: null, error: error.message };
   }
@@ -96,11 +155,30 @@ export async function deleteUserAction(data: any) {
       throw new Error("Cannot delete yourself.");
     }
 
-    const user = await UserRepository.softDelete(userId);
+    const deletedUser = await prisma.$transaction(async (tx) => {
+      // Perform soft delete
+      const user = await tx.user.update({
+        where: { id: userId },
+        data: { deletedAt: new Date() }
+      });
+      
+      // Immediately create audit log entry
+      await tx.auditLog.create({
+        data: {
+          action: 'DELETE_USER',
+          userId: currentUser.id,
+          targetId: userId,
+          targetEmail: user.email,
+          metadata: { message: "User soft deleted" }
+        }
+      });
+      
+      return user;
+    });
     
     revalidatePath('/manager');
     revalidateTag('users', 'default');
-    return { success: true, data: user, error: null };
+    return { success: true, data: deletedUser, error: null };
   } catch (error: any) {
     return { success: false, data: null, error: error.message };
   }

@@ -67,7 +67,7 @@ enum TaskStatus {
 model User {
   id            String    @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String
   emailVerified DateTime?
   password      String?
   image         String?
@@ -148,14 +148,16 @@ model UserProject {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  action    String
-  userId    String
-  targetId  String?
+  id          String   @id @default(cuid())
+  action      String
+  userId      String
+  targetId    String?
+  targetEmail String?
+  metadata    Json?
   
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   @@index([userId])
   @@index([createdAt])
